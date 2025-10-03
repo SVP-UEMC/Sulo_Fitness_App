@@ -1,0 +1,12 @@
+{
+  "name": "Mi App Fitness",
+  "short_name": "FitnessApp",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#191716",
+  "theme_color": "#E6AF2E",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

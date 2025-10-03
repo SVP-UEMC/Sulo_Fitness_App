@@ -1,0 +1,14 @@
+{
+  "tema": {
+    "colores": {
+      "primario": "#191716",
+      "secundario": "#E6AF2E",
+      "fondo_claro": "#E0E2DB", 
+      "destacado": "#3D348B"
+    }
+  },
+  "funcionalidades": {
+    "backup_automatico": true,
+    "modo_offline": true
+  }
+}
