@@ -1,134 +1,117 @@
-// app.js - Sistema Integral de Entrenamiento y Nutrición
-// ================================================================
-
-// 1. REGISTRO DEL SERVICE WORKER (PWA)
-// ===================================
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(function(registration) {
-        console.log('✅ Service Worker registrado correctamente:', registration.scope);
-      })
-      .catch(function(error) {
-        console.log('❌ Error al registrar Service Worker:', error);
-      });
-  });
-} else {
-  console.log('❌ Service Worker no soportado en este navegador');
-}
-
-// 2. VARIABLES GLOBALES
-// ====================
-let datosApp = {
-  perfil: null,
-  ingredientes: null,
-  objetivos: null,
-  comidas: null,
-  entrenamientos: null,
-  equipamiento: null,
-  configuracion: null
+// Datos globales para Sulo Fitness App
+let datosSuloFitness = {
+  ingredientes: [],
+  ejercicios: [],
+  objetivos: []
 };
 
-let fechaActual = new Date();
-let vistaActual = 'diaria'; // 'diaria' o 'semanal'
-
-// 3. INICIALIZACIÓN DE LA APP
-// ==========================
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('🚀 Inicializando aplicación...');
-  
-  // Crear estructura básica si no existe
-  if (!document.getElementById('app')) {
-    document.body.innerHTML = '<div id="app"></div>';
-  }
-  
-  // Cargar datos desde archivos JSON
-  cargarDatosIniciales();
-});
-
-// 4. CARGA DE DATOS JSON
-// ======================
+// Cargar datos iniciales desde carpeta data/
 async function cargarDatosIniciales() {
   try {
-    console.log('📥 Cargando datos desde archivos JSON...');
-    
-    // Cargar todos los archivos JSON
-    const [perfil, ingredientes, objetivos, comidas, entrenamientos, equipamiento, configuracion] = await Promise.all([
-      fetch('data/perfil.json').then(res => res.json()),
-      fetch('data/ingredientes.json').then(res => res.json()),
-      fetch('data/objetivos.json').then(res => res.json()),
-      fetch('data/comidas.json').then(res => res.json()),
-      fetch('data/entrenamientos.json').then(res => res.json()),
-      fetch('data/equipamiento.json').then(res => res.json()),
-      fetch('data/configuracion.json').then(res => res.json())
-    ]);
-    
-    // Guardar datos globalmente
-    datosApp = {
-      perfil,
-      ingredientes,
-      objetivos,
-      comidas,
-      entrenamientos,
-      equipamiento,
-      configuracion
-    };
-    
-    console.log('✅ Datos cargados correctamente:', datosApp);
-    
-    // Aplicar tema de colores
-    aplicarTemaColores();
-    
-    // Cargar datos del usuario desde localStorage si existen
-    cargarDatosUsuario();
-    
-    // Inicializar interfaz
-    inicializarInterfaz();
-    
+    const responseIngredientes = await fetch('./data/ingredientes.json');
+    const ingredientesData = await responseIngredientes.json();
+    datosSuloFitness.ingredientes = ingredientesData.ingredientes;
+
+    const responseEjercicios = await fetch('./data/ejercicios.json');
+    const ejerciciosData = await responseEjercicios.json();
+    datosSuloFitness.ejercicios = ejerciciosData.ejercicios;
+
+    const responseObjetivos = await fetch('./data/objetivos.json');
+    const objetivosData = await responseObjetivos.json();
+    datosSuloFitness.objetivos = objetivosData.objetivos;
+
+    console.log('Datos iniciales de Sulo Fitness App cargados correctamente');
+    mostrarIngredientes(); // Mostrar contenido inicial
   } catch (error) {
-    console.error('❌ Error cargando datos:', error);
-    mostrarError('Error al cargar la configuración de la aplicación');
+    console.error('Error cargando datos iniciales:', error);
+    document.getElementById('contenido').textContent = 'Error cargando datos.';
   }
 }
 
-// 5. APLICAR TEMA DE COLORES
-// =========================
-function aplicarTemaColores() {
-  const colores = datosApp.configuracion.tema.colores;
-  
-  // Crear variables CSS dinámicamente
-  const root = document.documentElement;
-  root.style.setProperty('--color-primario', colores.primario);
-  root.style.setProperty('--color-secundario', colores.secundario);
-  root.style.setProperty('--color-fondo-claro', colores.fondo_claro);
-  root.style.setProperty('--color-destacado', colores.destacado);
-  
-  console.log('🎨 Tema aplicado:', colores);
-}
+// Funciones para mostrar cada sección
 
-// 6. CARGAR/GUARDAR DATOS DE USUARIO
-// ==================================
-function cargarDatosUsuario() {
-  const datosGuardados = localStorage.getItem('fitness-app-datos-usuario');
-  if (datosGuardados) {
-    try {
-      const datos = JSON.parse(datosGuardados);
-      // Actualizar perfil con datos guardados
-      datosApp.perfil = { ...datosApp.perfil, ...datos.perfil };
-      console.log('✅ Datos de usuario cargados desde localStorage');
-    } catch (error) {
-      console.error('❌ Error al cargar datos de usuario:', error);
-    }
+function mostrarIngredientes() {
+  const seccion = document.getElementById('contenido');
+  seccion.innerHTML = '<h2>Ingredientes</h2>';
+
+  if (datosSuloFitness.ingredientes.length === 0) {
+    seccion.innerHTML += '<p>No hay ingredientes disponibles.</p>';
+    return;
   }
+
+  const lista = document.createElement('ul');
+  datosSuloFitness.ingredientes.forEach(ingrediente => {
+    const item = document.createElement('li');
+    item.textContent = `${ingrediente.nombre} - Calorías: ${ingrediente.calorias_por_100g} kcal`;
+    lista.appendChild(item);
+  });
+  seccion.appendChild(lista);
 }
 
-function guardarDatosUsuario() {
-  try {
-    const datosParaGuardar = {
-      perfil: datosApp.perfil,
-      fecha_guardado: new Date().toISOString(),
-      version: datosApp.configuracion.app_info.version
-    };
-    
-    localStorage.setItem('fitness-app-datos-usuario', JSON.
+function mostrarEjercicios() {
+  const seccion = document.getElementById('contenido');
+  seccion.innerHTML = '<h2>Ejercicios</h2>';
 
+  if (datosSuloFitness.ejercicios.length === 0) {
+    seccion.innerHTML += '<p>No hay ejercicios disponibles.</p>';
+    return;
+  }
+
+  datosSuloFitness.ejercicios.forEach(ejercicio => {
+    const bloque = document.createElement('div');
+    bloque.classList.add('ejercicio');
+    bloque.innerHTML = `
+      <h3>${ejercicio.nombre}</h3>
+      <p>${ejercicio.descripcion}</p>
+      <p><strong>Músculos:</strong> ${ejercicio.musculos_principales.join(', ')}</p>
+      <p><strong>Duración estimada:</strong> ${ejercicio.duracion_estimada} segundos</p>
+    `;
+    seccion.appendChild(bloque);
+  });
+}
+
+function mostrarObjetivos() {
+  const seccion = document.getElementById('contenido');
+  seccion.innerHTML = '<h2>Objetivos</h2>';
+
+  if (datosSuloFitness.objetivos.length === 0) {
+    seccion.innerHTML += '<p>No hay objetivos disponibles.</p>';
+    return;
+  }
+
+  datosSuloFitness.objetivos.forEach(objetivo => {
+    const item = document.createElement('div');
+    item.classList.add('objetivo');
+    item.innerHTML = `
+      <h3>${objetivo.nombre}</h3>
+      <p>${objetivo.descripcion}</p>
+      <p><strong>Frecuencia de entrenamiento:</strong> ${objetivo.frecuencia_entrenamientos} días/semana</p>
+    `;
+    seccion.appendChild(item);
+  });
+}
+
+// Eventos para menú
+document.getElementById('btnVerIngredientes').addEventListener('click', mostrarIngredientes);
+document.getElementById('btnVerEjercicios').addEventListener('click', mostrarEjercicios);
+document.getElementById('btnVerObjetivos').addEventListener('click', mostrarObjetivos);
+
+// Cargar al iniciar
+document.addEventListener('DOMContentLoaded', cargarDatosIniciales);
+
+// Función placeholder para inicializar la app si es necesario
+function inicializarApp() {
+  // Aquí puedes poner lógica extra si quieres al iniciar
+}
+// Registrar el service worker para habilitar PWA y cacheo
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(registration => {
+        console.log('Service Worker registrado con éxito:', registration.scope);
+      })
+      .catch(error => {
+        console.error('Error al registrar Service Worker:', error);
+      });
+  });
+}

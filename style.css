@@ -1,3 +1,65 @@
-body { background: #191716; color: #3D348B; font-family: sans-serif; }
-button { background: #E6AF2E; color: #191716; border: none; border-radius: 8px; padding: 12px; }
-.card { background: #E0E2DB; border-radius: 12px; margin: 12px; padding: 16px; }
+/* Colores base de la app Sulo Fitness App según tu paleta */
+:root {
+    --color-fondo: #191716;
+    --color-destacado: #E6AF2E;
+    --color-texto: #E0E2DB;
+    --color-acento: #3D348B;
+  }
+  
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
+  }
+  
+  header {
+    background-color: var(--color-acento);
+    padding: 1rem;
+    text-align: center;
+  }
+  
+  header h1 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.8rem;
+  }
+  
+  nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 0 0;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+  
+  nav button {
+    background-color: var(--color-destacado);
+    border: none;
+    color: var(--color-fondo);
+    padding: 0.5rem 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+  }
+  
+  nav button:hover {
+    background-color: var(--color-acento);
+    color: var(--color-texto);
+  }
+  
+  main {
+    padding: 1rem 2rem;
+    min-height: 60vh;
+  }
+  
+  footer {
+    background-color: var(--color-acento);
+    text-align: center;
+    padding: 0.5rem;
+    color: var(--color-texto);
+    font-size: 0.9rem;
+  }
+  
