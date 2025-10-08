@@ -1,5 +1,5 @@
 // ===============================================
-// SULO FITNESS - ARQUITECTURA MODULAR
+// SULO FITNESS - ARQUITECTURA MODULAR CORREGIDA
 // Aplicación unificada con módulos independientes
 // ===============================================
 
@@ -65,6 +65,9 @@ class ThemeManager {
         document.body.style.color = colors.text;
         document.body.style.fontFamily = "'Montserrat', sans-serif";
         
+        // Aplicar clase al body para CSS
+        document.body.className = this.currentTheme === 'light' ? 'light-theme' : '';
+        
         // Dispatch evento para que los módulos se actualicen
         window.dispatchEvent(new CustomEvent('theme-changed', { detail: colors }));
     }
@@ -79,12 +82,21 @@ class StorageManager {
     }
 
     set(key, value) {
-        localStorage.setItem(this.prefix + key, JSON.stringify(value));
+        try {
+            localStorage.setItem(this.prefix + key, JSON.stringify(value));
+        } catch (error) {
+            console.warn('Error guardando en localStorage:', error);
+        }
     }
 
     get(key, defaultValue = null) {
-        const item = localStorage.getItem(this.prefix + key);
-        return item ? JSON.parse(item) : defaultValue;
+        try {
+            const item = localStorage.getItem(this.prefix + key);
+            return item ? JSON.parse(item) : defaultValue;
+        } catch (error) {
+            console.warn('Error leyendo localStorage:', error);
+            return defaultValue;
+        }
     }
 
     remove(key) {
@@ -116,7 +128,7 @@ class NotificationManager {
         };
 
         const toast = document.createElement('div');
-        toast.className = 'toast';
+        toast.className = 'toast ' + type;
         toast.style.cssText = `
             position: fixed; top: 24px; right: 24px;
             background: ${toastColors[type]}; color: ${colors.textDark};
@@ -131,7 +143,11 @@ class NotificationManager {
 
         setTimeout(() => {
             toast.style.animation = 'slideOutRight 0.4s ease-out';
-            setTimeout(() => toast.remove(), 400);
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 400);
         }, duration);
     }
 }
@@ -148,8 +164,8 @@ class RouterManager {
         // Escuchar cambios en la URL
         window.addEventListener('popstate', () => this.handleRouteChange());
         
-        // Manejar la ruta inicial
-        this.handleRouteChange();
+        // Manejar la ruta inicial después de un pequeño delay
+        setTimeout(() => this.handleRouteChange(), 100);
     }
 
     register(path, handler) {
@@ -175,7 +191,12 @@ class RouterManager {
 
         const handler = this.routes.get(route);
         if (handler) {
-            handler(this.params);
+            try {
+                handler(this.params);
+            } catch (error) {
+                console.error('Error en ruta:', route, error);
+                this.navigate('inicio');
+            }
         } else {
             // Ruta por defecto
             this.navigate('inicio');
@@ -366,7 +387,7 @@ class WorkoutModule extends BaseModule {
     }
 
     registerRoutes() {
-        this.app.router.register('workout', (params) => this.showWorkoutView());
+        this.app.router.register('workout', () => this.showWorkoutView());
         this.app.router.register('workout-detail', (params) => this.showWorkoutDetail(params.routeParams));
     }
 
@@ -493,8 +514,8 @@ class WorkoutModule extends BaseModule {
             </div>
         `;
         
-        const day = params[0] || new Date().getDate();
-        const workoutType = params[1] || 'fuerza_superior';
+        const day = params && params[0] ? params[0] : new Date().getDate();
+        const workoutType = params && params[1] ? params[1] : 'fuerza_superior';
         const workoutData = await this.generateWorkoutDetail(day, workoutType);
         
         container.innerHTML = `
@@ -574,7 +595,7 @@ class WorkoutModule extends BaseModule {
         if (exercises.length > 0) {
             phases.push({
                 name: '💪 TRABAJO PRINCIPAL',
-                duration: todaysPlan.duration - 30,
+                duration: (todaysPlan.duration || 90) - 30,
                 exercises: exercises.slice(0, 4)
             });
         }
@@ -1010,6 +1031,13 @@ class SuloFitnessApp {
         
         console.log('Inicializando Sulo Fitness App...');
         
+        // Esperar a que el DOM esté listo
+        if (document.readyState === 'loading') {
+            await new Promise(resolve => {
+                document.addEventListener('DOMContentLoaded', resolve);
+            });
+        }
+        
         // Cargar fuentes
         this.loadFonts();
         
@@ -1028,6 +1056,15 @@ class SuloFitnessApp {
         // Mostrar interfaz
         this.showMainInterface();
         
+        // Ocultar pantalla de carga
+        setTimeout(() => {
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+                loadingScreen.style.display = 'none';
+            }
+            document.body.classList.add('app-loaded');
+        }, 1000);
+        
         this.initialized = true;
         console.log('Sulo Fitness App inicializada correctamente');
     }
@@ -1037,15 +1074,6 @@ class SuloFitnessApp {
         link.href = 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;500;600;700&display=swap';
         link.rel = 'stylesheet';
         document.head.appendChild(link);
-        
-        // Añadir estilos de animación
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-            @keyframes slideInRight { from { transform: translateX(300px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-            @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(300px); opacity: 0; } }
-        `;
-        document.head.appendChild(style);
     }
 
     async initializeModules() {
@@ -1153,19 +1181,25 @@ class SuloFitnessApp {
             <main id="main-content" style="padding: 40px 24px; background: ${colors.primary}; color: ${colors.text}; min-height: calc(100vh - 180px); max-width: 1400px; margin: 0 auto; font-family: 'Montserrat', sans-serif; line-height: 1.6;"></main>
         `;
         
-        document.getElementById('app').innerHTML = headerHTML + navHTML + mainHTML;
+        const appContainer = document.getElementById('app');
+        if (appContainer) {
+            appContainer.innerHTML = headerHTML + navHTML + mainHTML;
+        }
+        
         document.body.style.backgroundColor = colors.primary;
         document.body.style.color = colors.text;
         document.body.style.fontFamily = "'Montserrat', sans-serif";
         
-        // Manejar la ruta inicial
-        if (!this.router.getCurrentRoute()) {
-            this.navigate('inicio');
+        // Manejar la ruta inicial si no hay una activa
+        if (!this.router.getCurrentRoute() || this.router.getCurrentRoute() === '') {
+            setTimeout(() => this.navigate('inicio'), 100);
         }
     }
 
     showWelcomeView() {
         const container = document.getElementById('main-content');
+        if (!container) return;
+        
         const colors = this.theme.getColors();
         const profile = this.user.getProfile();
         const preferences = this.user.getPreferences();
@@ -1223,6 +1257,8 @@ class SuloFitnessApp {
 
     showDailyView() {
         const container = document.getElementById('main-content');
+        if (!container) return;
+        
         const colors = this.theme.getColors();
         const preferences = this.user.getPreferences();
         
@@ -1303,6 +1339,8 @@ class SuloFitnessApp {
 
     showWeeklyView() {
         const container = document.getElementById('main-content');
+        if (!container) return;
+        
         const colors = this.theme.getColors();
         
         this.updateActiveButton('semanal');
@@ -1328,6 +1366,8 @@ class SuloFitnessApp {
 
     showMonthlyView() {
         const container = document.getElementById('main-content');
+        if (!container) return;
+        
         const colors = this.theme.getColors();
         const preferences = this.user.getPreferences();
         
@@ -1377,6 +1417,8 @@ class SuloFitnessApp {
 
     showConfigView() {
         const container = document.getElementById('main-content');
+        if (!container) return;
+        
         const colors = this.theme.getColors();
         const preferences = this.user.getPreferences();
         
@@ -1457,8 +1499,10 @@ class SuloFitnessApp {
         const colors = this.theme.getColors();
         
         buttons.forEach(btn => {
-            btn.style.background = colors.accent;
-            btn.style.opacity = '0.8';
+            if (btn) {
+                btn.style.background = colors.accent;
+                btn.style.opacity = '0.8';
+            }
         });
         
         const activeButton = document.getElementById('btn-' + activeView);
@@ -1475,9 +1519,14 @@ class SuloFitnessApp {
 let app;
 
 // Inicializar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        app = new SuloFitnessApp();
+    });
+} else {
+    // DOM ya está listo
     app = new SuloFitnessApp();
-});
+}
 
 // Exportar para testing (opcional)
 if (typeof module !== 'undefined' && module.exports) {

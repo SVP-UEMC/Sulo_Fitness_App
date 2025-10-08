@@ -7,18 +7,27 @@
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#141414">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
     <!-- Pantalla de carga inicial -->
     <div id="loading-screen" style="
         position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
-        background: #141414; color: #fffcf7; display: flex;
-        flex-direction: column; justify-content: center; align-items: center;
+        background: linear-gradient(135deg, #141414 0%, #2a2824 100%);
+        color: #fffcf7; display: flex; flex-direction: column;
+        justify-content: center; align-items: center;
         font-family: 'Montserrat', sans-serif; z-index: 10000;
     ">
-        <h1 style="font-family: 'Bebas Neue', cursive; font-size: 3em; margin-bottom: 20px; letter-spacing: 2px;">💪 SULO FITNESS</h1>
-        <p style="font-size: 1.2em; opacity: 0.8;">Cargando arquitectura modular...</p>
-        <div style="margin-top: 30px; width: 50px; height: 50px; border: 3px solid #738290; border-top: 3px solid #a1b5d8; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <h1 style="font-family: 'Bebas Neue', cursive; font-size: 3em; margin-bottom: 20px; letter-spacing: 2px; text-align: center;">💪 SULO FITNESS</h1>
+        <p style="font-size: 1.2em; opacity: 0.8; margin-bottom: 30px; text-align: center;">Cargando arquitectura modular...</p>
+        <div style="
+            width: 50px; height: 50px; 
+            border: 3px solid #738290; 
+            border-top: 3px solid #a1b5d8; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite;
+        "></div>
     </div>
 
     <!-- Contenedor principal de la aplicación -->
@@ -27,9 +36,46 @@
     <!-- Scripts -->
     <script src="app.js"></script>
     
-    <!-- Animación del loader -->
+    <!-- Registrar Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/service-worker.js')
+                .then(function(registration) {
+                    console.log('✅ Service Worker registrado:', registration);
+                })
+                .catch(function(error) {
+                    console.log('❌ Error Service Worker:', error);
+                });
+            });
+        }
+    </script>
+    
+    <!-- Estilos para animaciones -->
     <style>
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        
+        @keyframes slideInRight { 
+            from { transform: translateX(300px); opacity: 0; } 
+            to { transform: translateX(0); opacity: 1; } 
+        }
+        
+        @keyframes slideOutRight { 
+            from { transform: translateX(0); opacity: 1; } 
+            to { transform: translateX(300px); opacity: 0; } 
+        }
+        
+        .app-loaded #loading-screen {
+            display: none !important;
+        }
     </style>
 </body>
 </html>

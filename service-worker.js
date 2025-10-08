@@ -1,9 +1,11 @@
-// Service Worker - Sulo Fitness App v1.0
-// Sistema Integral de Entrenamiento y Nutrición
+// ===============================================
+// SULO FITNESS - SERVICE WORKER v2.0
+// Sistema de caché optimizado para arquitectura modular
+// ===============================================
 
-const CACHE_NAME = 'sulo-fitness-v1.0';
-const CACHE_STATIC_NAME = 'sulo-fitness-static-v1.0';
-const CACHE_DYNAMIC_NAME = 'sulo-fitness-dynamic-v1.0';
+const CACHE_NAME = 'sulo-fitness-v2.0';
+const CACHE_STATIC_NAME = 'sulo-fitness-static-v2.0';
+const CACHE_DYNAMIC_NAME = 'sulo-fitness-dynamic-v2.0';
 
 // Archivos esenciales para cachear
 const STATIC_FILES = [
@@ -11,12 +13,10 @@ const STATIC_FILES = [
     '/index.html',
     '/app.js',
     '/style.css',
-    '/manifest.json',
-    '/icon-192.png',
-    '/icon-512.png'
+    '/manifest.json'
 ];
 
-// Archivos de datos JSON
+// Archivos de datos JSON (opcionales)
 const DATA_FILES = [
     '/data/configuracion.json',
     '/data/perfil.json',
@@ -31,7 +31,9 @@ const DATA_FILES = [
 const EXTERNAL_APIS = [
     'api.nal.usda.gov',
     'wger.de',
-    'openfoodfacts.org'
+    'openfoodfacts.org',
+    'fonts.googleapis.com',
+    'fonts.gstatic.com'
 ];
 
 // ===================================
@@ -42,20 +44,22 @@ self.addEventListener('install', function(event) {
     
     event.waitUntil(
         Promise.all([
-            // Cachear archivos estáticos
+            // Cachear archivos estáticos (críticos)
             caches.open(CACHE_STATIC_NAME).then(cache => {
                 console.log('📦 Cacheando archivos estáticos...');
                 return cache.addAll(STATIC_FILES.map(url => {
                     return new Request(url, { cache: 'reload' });
                 }));
             }),
-            // Cachear archivos de datos
+            
+            // Cachear archivos de datos (no críticos)
             caches.open(CACHE_DYNAMIC_NAME).then(cache => {
                 console.log('📊 Cacheando archivos de datos...');
                 return cache.addAll(DATA_FILES.map(url => {
                     return new Request(url, { cache: 'reload' });
                 })).catch(error => {
                     console.warn('⚠️ Algunos archivos de datos no se pudieron cachear:', error);
+                    // No fallar la instalación por archivos de datos faltantes
                 });
             })
         ]).then(() => {
@@ -104,18 +108,25 @@ self.addEventListener('fetch', function(event) {
         return;
     }
     
-    // No cachear APIs externas
+    // No cachear APIs externas y fuentes (dejar que se carguen normalmente)
     if (EXTERNAL_APIS.some(api => requestURL.hostname.includes(api))) {
         console.log('🌐 API externa (no cachear):', event.request.url);
-        return fetch(event.request).catch(error => {
-            console.warn('⚠️ Error en API externa:', error);
-            return new Response('{"error": "API no disponible"}', {
-                status: 503,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        });
+        event.respondWith(
+            fetch(event.request).catch(error => {
+                console.warn('⚠️ Error en API externa:', error);
+                if (requestURL.pathname.endsWith('.json')) {
+                    return new Response('{"error": "API no disponible"}', {
+                        status: 503,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+                return new Response('Recurso no disponible', { status: 503 });
+            })
+        );
+        return;
     }
     
+    // Estrategia de caché para el resto de recursos
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
             if (cachedResponse) {
@@ -131,7 +142,7 @@ self.addEventListener('fetch', function(event) {
                     // Decidir en qué caché guardar
                     const cacheName = DATA_FILES.includes(requestURL.pathname) ? 
                         CACHE_DYNAMIC_NAME : CACHE_STATIC_NAME;
-                    
+                        
                     const responseClone = response.clone();
                     caches.open(cacheName).then(cache => {
                         cache.put(event.request, responseClone);
@@ -194,7 +205,7 @@ self.addEventListener('message', function(event) {
                     caches.keys().then(cacheNames => {
                         return Promise.all(
                             cacheNames.filter(name => name.includes('sulo-fitness'))
-                                     .map(name => caches.delete(name))
+                                .map(name => caches.delete(name))
                         );
                     }).then(() => {
                         event.ports[0]?.postMessage({ success: true, message: 'Caché limpiada' });
@@ -204,8 +215,8 @@ self.addEventListener('message', function(event) {
                 
             case 'GET_CACHE_STATUS':
                 caches.keys().then(cacheNames => {
-                    event.ports[0]?.postMessage({ 
-                        success: true, 
+                    event.ports[0]?.postMessage({
+                        success: true,
                         caches: cacheNames.filter(name => name.includes('sulo-fitness'))
                     });
                 });
@@ -230,4 +241,4 @@ self.addEventListener('sync', function(event) {
     // Futuro: sincronización de datos cuando vuelva la conexión
 });
 
-console.log('✅ Service Worker v1.0 cargado correctamente para Sulo Fitness App');
+console.log('✅ Service Worker v2.0 cargado correctamente para Sulo Fitness App');
