@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SULO FITNESS - Entrenador Personal Modular</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#141414">
+</head>
+<body>
+    <!-- Pantalla de carga inicial -->
+    <div id="loading-screen" style="
+        position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+        background: #141414; color: #fffcf7; display: flex;
+        flex-direction: column; justify-content: center; align-items: center;
+        font-family: 'Montserrat', sans-serif; z-index: 10000;
+    ">
+        <h1 style="font-family: 'Bebas Neue', cursive; font-size: 3em; margin-bottom: 20px; letter-spacing: 2px;">💪 SULO FITNESS</h1>
+        <p style="font-size: 1.2em; opacity: 0.8;">Cargando arquitectura modular...</p>
+        <div style="margin-top: 30px; width: 50px; height: 50px; border: 3px solid #738290; border-top: 3px solid #a1b5d8; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+    </div>
+
+    <!-- Contenedor principal de la aplicación -->
+    <div id="app"></div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+    
+    <!-- Animación del loader -->
+    <style>
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</body>
+</html>
