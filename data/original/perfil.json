@@ -1,0 +1,15 @@
+{
+  "nombre": "Sulo",
+  "sexo": "masculino", 
+  "edad": 45,
+  "peso": 74,
+  "altura": 184,
+  "lesiones": [
+    "Artrodesis de L3-L4 por espondilolístesis",
+    "Operado de LCA rodilla derecha hace 4 años"
+  ],
+  "plan_activo": {
+    "ejercicio": true,
+    "alimentacion": true
+  }
+}
