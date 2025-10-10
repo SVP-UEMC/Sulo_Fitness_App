@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Meta tags esenciales -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sulo Fitness v2.0 - Tu centro de entrenamiento y nutrición inteligente">
+    <meta name="keywords" content="fitness, entrenamiento, nutrición, salud, macronutrientes">
+    <meta name="author" content="Sulo Fitness">
+    
+    <!-- PWA Meta tags -->
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Sulo Fitness">
+    
+    <title>💪 Sulo Fitness v2.0 | BACKUP</title>
+    
+    <!-- Manifest PWA -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💪</text></svg>">
+    
+    <!-- Fuentes de Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS principal -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Estilos CSS críticos inline -->
+    <style>
+        /* CSS crítico para carga rápida */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            color: #0f172a;
+            background: #f8fafc;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Loading screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: white;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .loading-subtext {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9em;
+        }
+        
+        /* App container */
+        #app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Animaciones básicas */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                font-size: 14px;
+            }
+        }
+        
+        /* Variables CSS para temas */
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #e2e8f0;
+            --accent-color: #3b82f6;
+            --background-color: #ffffff;
+            --text-color: #0f172a;
+            --text-dark: #0f172a;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --card-bg: #ffffff;
+            --input-bg: #ffffff;
+            --hover-bg: #f1f5f9;
+        }
+        
+        /* Modo oscuro */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary-color: #1e293b;
+                --secondary-color: #475569;
+                --background-color: #0f172a;
+                --text-color: #f8fafc;
+                --text-dark: #f8fafc;
+                --text-secondary: #94a3b8;
+                --border-color: #475569;
+                --card-bg: #1e293b;
+                --input-bg: #1e293b;
+                --hover-bg: #334155;
+            }
+        }
+        
+        /* Estados de error */
+        .error-boundary {
+            padding: 40px 20px;
+            text-align: center;
+            background: #fef2f2;
+            border: 2px solid #fca5a5;
+            border-radius: 12px;
+            margin: 20px;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .error-boundary h1 {
+            color: #dc2626;
+            margin-bottom: 16px;
+        }
+        
+        .error-boundary p {
+            color: #7f1d1d;
+            margin-bottom: 20px;
+        }
+        
+        .error-boundary button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Pantalla de carga inicial -->
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <div class="loading-text">💪 Sulo Fitness v2.0</div>
+        <div class="loading-subtext">Versión de backup - Cargando...</div>
+    </div>
+    
+    <!-- Contenedor principal de la aplicación -->
+    <div id="app">
+        <!-- La aplicación se carga aquí dinámicamente -->
+        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; text-align: center;">
+            <div style="max-width: 500px; padding: 40px;">
+                <div style="font-size: 4em; margin-bottom: 20px;">⚡</div>
+                <h2 style="color: var(--text-dark); margin-bottom: 16px; font-family: 'Poppins', sans-serif;">
+                    Preparando aplicación...
+                </h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Cargando módulos del sistema
+                </p>
+                <div style="width: 100%; height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden;">
+                    <div style="height: 100%; background: var(--accent-color); width: 0%; animation: progressBar 3s ease-out infinite;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Boundary de error para JavaScript deshabilitado -->
+    <noscript>
+        <div class="error-boundary">
+            <h1>⚠️ JavaScript Requerido</h1>
+            <p>Esta aplicación requiere JavaScript para funcionar correctamente.</p>
+            <p>Por favor, habilita JavaScript en tu navegador y recarga la página.</p>
+            <button onclick="location.reload()">🔄 Recargar Página</button>
+        </div>
+    </noscript>
+    
+    <!-- Información de backup -->
+    <div id="backup-info" style="
+        position: fixed; 
+        bottom: 20px; 
+        left: 20px; 
+        background: rgba(0,0,0,0.8); 
+        color: white; 
+        padding: 12px 20px; 
+        border-radius: 8px; 
+        font-size: 0.85em; 
+        font-weight: 600;
+        z-index: 9999;
+        opacity: 0.7;
+    ">
+        📁 VERSIÓN BACKUP v2.0 | 10 Oct 2025, 15:31
+    </div>
+    
+    <!-- Scripts principales -->
+    <script>
+        // Animación de barra de progreso
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes progressBar {
+                0% { width: 0%; }
+                50% { width: 70%; }
+                100% { width: 100%; }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Ocultar información de backup después de 5 segundos
+        setTimeout(() => {
+            const backupInfo = document.getElementById('backup-info');
+            if (backupInfo) {
+                backupInfo.style.transition = 'opacity 1s ease-out';
+                backupInfo.style.opacity = '0';
+                setTimeout(() => backupInfo.remove(), 1000);
+            }
+        }, 5000);
+        
+        // Manejo de errores globales
+        window.addEventListener('error', (event) => {
+            console.error('💥 Error JavaScript:', event.error);
+            const app = document.getElementById('app');
+            if (app && !document.querySelector('.error-displayed')) {
+                app.innerHTML = `
+                    <div class="error-boundary error-displayed">
+                        <h1>⚠️ Error de Aplicación</h1>
+                        <p>Se ha producido un error inesperado en la aplicación.</p>
+                        <p><strong>Error:</strong> ${event.error?.message || 'Error desconocido'}</p>
+                        <button onclick="location.reload()">🔄 Recargar Aplicación</button>
+                    </div>
+                `;
+            }
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('💥 Promise rechazada:', event.reason);
+        });
+        
+        // Monitoreo de conectividad
+        window.addEventListener('online', () => {
+            console.log('🟢 Conexión restaurada');
+        });
+        
+        window.addEventListener('offline', () => {
+            console.log('🔴 Conexión perdida - Funcionando offline');
+        });
+        
+        // Información del sistema
+        console.log('%c💪 Sulo Fitness v2.0 - BACKUP', 'color: #3b82f6; font-size: 16px; font-weight: bold;');
+        console.log('%cVersión de backup creada: 10 de Octubre 2025, 15:31 CEST', 'color: #64748b;');
+        console.log('%cEsta es una copia de seguridad de tu versión funcional', 'color: #f59e0b;');
+    </script>
+    
+    <!-- Cargar aplicación principal -->
+    <script src="app-v2-backup.js"></script>
+    
+    <!-- Service Worker -->
+    <script>
+        // Registro opcional del Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => {
+                        console.log('✅ SW registrado (backup):', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ℹ️ SW no disponible (backup):', error.message);
+                    });
+            });
+        }
+    </script>
+    
+    <!-- Métricas de rendimiento -->
+    <script>
+        window.addEventListener('load', () => {
+            const loadTime = performance.now();
+            console.log(`⚡ Backup app cargada en: ${Math.round(loadTime)}ms`);
+            
+            // Información de memoria si está disponible
+            if (performance.memory) {
+                console.log(`💾 Memoria usada: ${Math.round(performance.memory.usedJSHeapSize / 1024 / 1024)}MB`);
+            }
+        });
+    </script>
+</body>
+</html>
