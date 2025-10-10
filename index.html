@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Meta tags esenciales -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sulo Fitness v3.0 - Entrenamiento inteligente personalizado con adaptación médica">
+    <meta name="keywords" content="fitness, entrenamiento, personalizado, médico, rehabilitación, IA">
+    <meta name="author" content="Sulo Fitness">
+    
+    <!-- PWA Meta tags -->
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Sulo Fitness">
+    
+    <!-- Security headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <meta name="robots" content="noindex, nofollow">
+    
+    <!-- Preconnect para rendimiento -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    
+    <title>💪 Sulo Fitness v3.0 | Entrenamiento Inteligente</title>
+    
+    <!-- Manifest PWA -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon moderno -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💪</text></svg>">
+    <link rel="apple-touch-icon" sizes="192x192" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192' fill='%233b82f6'><rect width='192' height='192' rx='24' fill='%23f8fafc'/><text x='96' y='130' font-size='80' text-anchor='middle'>💪</text></svg>">
+    
+    <!-- Fuentes optimizadas -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@400;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@400;600;700;800;900&display=swap"></noscript>
+    
+    <!-- Chart.js para gráficos -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js" as="script">
+    
+    <!-- Estilos CSS -->
+    <style>
+        /* CSS crítico inline para First Paint rápido */
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #e2e8f0;
+            --accent-color: #3b82f6;
+            --background-color: #ffffff;
+            --text-dark: #0f172a;
+            --text-secondary: #64748b;
+        }
+        
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--background-color);
+            color: var(--text-dark);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+        
+        /* Loading spinner inicial */
+        .loading-spinner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        .loading-spinner.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 24px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: white;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .loading-subtext {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9em;
+        }
+        
+        /* Animaciones */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(300px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideInDown {
+            from { transform: translateY(-100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes slideOutUp {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(-100px); opacity: 0; }
+        }
+        
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(300px); opacity: 0; }
+        }
+        
+        @keyframes alertPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        /* Estilos base para evitar FOUC */
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Media queries básicos */
+        @media (max-width: 768px) {
+            body {
+                font-size: 14px;
+            }
+        }
+        
+        /* Modo oscuro automático */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --background-color: #0f172a;
+                --text-dark: #f8fafc;
+                --secondary-color: #475569;
+            }
+        }
+        
+        /* Estados de error */
+        .error-boundary {
+            padding: 40px 20px;
+            text-align: center;
+            background: #fef2f2;
+            border: 2px solid #fca5a5;
+            border-radius: 12px;
+            margin: 20px;
+        }
+    </style>
+    
+    <!-- Link a CSS externo (non-blocking) -->
+    <link rel="preload" href="style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="style.css"></noscript>
+</head>
+
+<body>
+    <!-- Loading spinner inicial -->
+    <div id="loading-spinner" class="loading-spinner">
+        <div class="spinner"></div>
+        <div class="loading-text">💪 Sulo Fitness v3.0</div>
+        <div class="loading-subtext">Cargando entrenamiento inteligente...</div>
+    </div>
+    
+    <!-- Contenedor principal de la aplicación -->
+    <div id="app" class="app-container" style="display: none;">
+        
+        <!-- Header principal -->
+        <header id="app-header" style="
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            color: white;
+            padding: 16px 20px;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="font-size: 1.8em;">💪</div>
+                    <div>
+                        <h1 style="margin: 0; font-size: 1.4em; font-weight: 800; font-family: 'Poppins', sans-serif;">Sulo Fitness</h1>
+                        <div style="font-size: 0.75em; opacity: 0.9; font-weight: 500;">Entrenamiento Inteligente v3.0</div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div id="connection-status" style="font-size: 0.8em; opacity: 0.8;">🟢 Online</div>
+                    <button id="theme-toggle" style="
+                        background: rgba(255,255,255,0.2); 
+                        border: none; 
+                        color: white; 
+                        padding: 8px 12px; 
+                        border-radius: 8px; 
+                        cursor: pointer; 
+                        font-size: 1.1em;
+                        backdrop-filter: blur(10px);
+                    ">🌙</button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Contenido principal -->
+        <main id="main-content" style="
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px 20px;
+            width: 100%;
+        ">
+            <!-- El contenido se carga dinámicamente aquí -->
+            <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+                <div style="font-size: 3em; margin-bottom: 16px;">⚡</div>
+                <h2>Cargando aplicación...</h2>
+                <p>Preparando tu entrenamiento personalizado</p>
+            </div>
+        </main>
+        
+        <!-- Navegación inferior -->
+        <nav id="bottom-navigation" style="
+            background: white;
+            border-top: 2px solid #e2e8f0;
+            padding: 16px 20px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            bottom: 0;
+            z-index: 1000;
+        ">
+            <div style="display: flex; justify-content: space-around; align-items: center; max-width: 600px; margin: 0 auto;">
+                
+                <button class="nav-btn active" data-view="inicio" onclick="app?.navigate('inicio')" style="
+                    background: none;
+                    border: none;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    padding: 8px 16px;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    color: #3b82f6;
+                ">
+                    <span style="font-size: 1.5em;">🏠</span>
+                    <span style="font-size: 0.8em; font-weight: 600;">Inicio</span>
+                </button>
+                
+                <button class="nav-btn" data-view="entrenamiento" onclick="app?.navigate('entrenamiento')" style="
+                    background: none;
+                    border: none;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    padding: 8px 16px;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    color: #64748b;
+                ">
+                    <span style="font-size: 1.5em;">🏋️</span>
+                    <span style="font-size: 0.8em; font-weight: 600;">Entrenar</span>
+                </button>
+                
+                <button class="nav-btn" data-view="analytics" onclick="app?.navigate('analytics')" style="
+                    background: none;
+                    border: none;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    padding: 8px 16px;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    color: #64748b;
+                ">
+                    <span style="font-size: 1.5em;">📊</span>
+                    <span style="font-size: 0.8em; font-weight: 600;">Progreso</span>
+                </button>
+                
+                <button class="nav-btn" data-view="configuracion" onclick="app?.navigate('configuracion')" style="
+                    background: none;
+                    border: none;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    padding: 8px 16px;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    color: #64748b;
+                ">
+                    <span style="font-size: 1.5em;">⚙️</span>
+                    <span style="font-size: 0.8em; font-weight: 600;">Config</span>
+                </button>
+            </div>
+        </nav>
+    </div>
+    
+    <!-- Boundary de error para JavaScript deshabilitado -->
+    <noscript>
+        <div class="error-boundary">
+            <h2 style="color: #dc2626;">⚠️ JavaScript Requerido</h2>
+            <p>Esta aplicación requiere JavaScript para funcionar.</p>
+            <p>Por favor, habilita JavaScript en tu navegador.</p>
+        </div>
+    </noscript>
+    
+    <!-- Scripts externos críticos (async/defer para performance) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js" defer></script>
+    
+    <!-- Scripts de módulos de la aplicación -->
+    <!-- OPCIÓN A: App completo (un solo archivo) -->
+    <!-- <script src="app.js" defer></script> -->
+    
+    <!-- OPCIÓN B: Módulos separados (carga en orden específico) -->
+    <script>
+        // Sistema de carga modular con fallbacks y manejo de errores
+        
+        console.log('🚀 Iniciando carga de módulos Sulo Fitness v3.0...');
+        
+        const moduleLoader = {
+            modules: [
+                // Módulos base (cargan primero)
+                { name: 'ExerciseDatabase', path: 'data/exercises-database-complete.js', required: true },
+                { name: 'PeriodizationEngine', path: 'data/periodization-engine.js', required: true },
+                { name: 'AutoProgression', path: 'data/auto-progression.js', required: true },
+                
+                // Módulos de interface (cargan después)
+                { name: 'ExerciseInterface', path: 'data/exercise-execution-interface.js', required: true },
+                { name: 'WorkoutTools', path: 'data/workout-tools-advanced.js', required: true },
+                { name: 'Analytics', path: 'data/workout-analytics-system.js', required: true },
+                
+                // App principal (carga al final)
+                { name: 'MainApp', path: 'app.js', required: true }
+            ],
+            
+            loadedModules: new Set(),
+            failedModules: new Set(),
+            
+            async loadModule(module) {
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = module.path;
+                    script.defer = true;
+                    
+                    script.onload = () => {
+                        console.log(`✅ Módulo cargado: ${module.name}`);
+                        this.loadedModules.add(module.name);
+                        resolve(module);
+                    };
+                    
+                    script.onerror = (error) => {
+                        console.warn(`⚠️ Error cargando módulo: ${module.name}`, error);
+                        this.failedModules.add(module.name);
+                        
+                        if (module.required) {
+                            // Si es un módulo crítico, intentar fallback
+                            this.handleModuleFallback(module);
+                        }
+                        
+                        reject(error);
+                    };
+                    
+                    document.head.appendChild(script);
+                });
+            },
+            
+            handleModuleFallback(module) {
+                console.log(`🔄 Intentando fallback para: ${module.name}`);
+                
+                // Fallback 1: Intentar cargar app.js completo si fallan módulos
+                if (this.failedModules.size >= 2) {
+                    console.log('🔄 Cargando app completo como fallback...');
+                    this.loadFallbackApp();
+                    return;
+                }
+                
+                // Fallback 2: Crear mock del módulo para evitar errores
+                this.createModuleMock(module);
+            },
+            
+            loadFallbackApp() {
+                const script = document.createElement('script');
+                script.src = 'app-complete-v3.js'; // Tu app completo generado
+                script.defer = true;
+                script.onload = () => {
+                    console.log('✅ App completo cargado como fallback');
+                    this.initializeApp();
+                };
+                script.onerror = () => {
+                    console.error('❌ Error crítico: No se pudo cargar la aplicación');
+                    this.showCriticalError();
+                };
+                document.head.appendChild(script);
+            },
+            
+            createModuleMock(module) {
+                // Crear mocks básicos para evitar errores
+                window[module.name] = class {
+                    constructor() {
+                        console.warn(`⚠️ Usando mock para ${module.name}`);
+                    }
+                };
+            },
+            
+            async loadAllModules() {
+                try {
+                    // Cargar módulos secuencialmente para evitar conflictos de dependencias
+                    for (const module of this.modules) {
+                        try {
+                            await this.loadModule(module);
+                            // Pequeña pausa entre módulos para estabilidad
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        } catch (error) {
+                            console.warn(`Continuando sin módulo: ${module.name}`);
+                        }
+                    }
+                    
+                    // Dar tiempo a que se ejecuten los módulos
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    this.initializeApp();
+                    
+                } catch (error) {
+                    console.error('❌ Error crítico cargando módulos:', error);
+                    this.loadFallbackApp();
+                }
+            },
+            
+            initializeApp() {
+                // Ocultar spinner de carga
+                const spinner = document.getElementById('loading-spinner');
+                const app = document.getElementById('app');
+                
+                if (spinner) {
+                    spinner.classList.add('fade-out');
+                    setTimeout(() => spinner.style.display = 'none', 500);
+                }
+                
+                if (app) {
+                    app.style.display = 'flex';
+                }
+                
+                // Verificar que la app se haya inicializado
+                setTimeout(() => {
+                    if (typeof window.app === 'undefined') {
+                        console.warn('⚠️ App no encontrada, intentando inicializar...');
+                        this.showCriticalError();
+                    }
+                }, 2000);
+            },
+            
+            showCriticalError() {
+                const spinner = document.getElementById('loading-spinner');
+                if (spinner) {
+                    spinner.innerHTML = `
+                        <div style="text-align: center; padding: 40px;">
+                            <div style="font-size: 4em; margin-bottom: 20px;">⚠️</div>
+                            <h2 style="color: white; margin-bottom: 16px;">Error de Carga</h2>
+                            <p style="color: rgba(255,255,255,0.9); margin-bottom: 24px;">No se pudo cargar la aplicación correctamente</p>
+                            <button onclick="location.reload()" style="
+                                background: white; 
+                                color: #dc2626; 
+                                border: none; 
+                                padding: 12px 24px; 
+                                border-radius: 8px; 
+                                cursor: pointer; 
+                                font-weight: 700;
+                                font-size: 1em;
+                            ">🔄 Recargar Aplicación</button>
+                        </div>
+                    `;
+                }
+            }
+        };
+        
+        // Inicializar carga cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => moduleLoader.loadAllModules());
+        } else {
+            moduleLoader.loadAllModules();
+        }
+        
+        // Manejo de errores globales
+        window.addEventListener('error', (event) => {
+            console.error('💥 Error JavaScript:', event.error);
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('💥 Promise rechazada:', event.reason);
+        });
+        
+        // Monitoreo de conectividad
+        window.addEventListener('online', () => {
+            const status = document.getElementById('connection-status');
+            if (status) status.innerHTML = '🟢 Online';
+        });
+        
+        window.addEventListener('offline', () => {
+            const status = document.getElementById('connection-status');
+            if (status) status.innerHTML = '🔴 Offline';
+        });
+        
+        // Toggle de tema
+        document.addEventListener('DOMContentLoaded', () => {
+            const themeToggle = document.getElementById('theme-toggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', () => {
+                    if (window.app && window.app.theme) {
+                        window.app.theme.toggleTheme();
+                        themeToggle.textContent = window.app.theme.currentTheme === 'dark' ? '☀️' : '🌙';
+                    }
+                });
+            }
+        });
+    </script>
+    
+    <!-- Preload del service worker -->
+    <script>
+        // Registro del Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('✅ SW registrado:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('❌ Error SW:', error);
+                    });
+            });
+        }
+    </script>
+    
+    <!-- Analytics y métricas de rendimiento -->
+    <script>
+        // Métricas de rendimiento
+        window.addEventListener('load', () => {
+            // Medir tiempo de carga
+            const loadTime = performance.now();
+            console.log(`⚡ App cargada en: ${Math.round(loadTime)}ms`);
+            
+            // Medir memoria (si está disponible)
+            if (performance.memory) {
+                console.log(`💾 Memoria usada: ${Math.round(performance.memory.usedJSHeapSize / 1024 / 1024)}MB`);
+            }
+            
+            // Core Web Vitals básicos
+            if ('web-vitals' in window) {
+                // Se podría integrar web-vitals library aquí
+            }
+        });
+        
+        // Modo de depuración
+        if (localStorage.getItem('debug-sulo-fitness') === 'true') {
+            console.log('🐛 Modo debug activado');
+            window.DEBUG = true;
+        }
+    </script>
+</body>
+</html>
