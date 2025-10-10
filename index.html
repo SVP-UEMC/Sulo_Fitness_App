@@ -3,79 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SULO FITNESS - Entrenador Personal Modular</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Sulo Fitness v2.0 - Tu Asistente de Fitness</title>
+    <meta name="description" content="Aplicación de fitness y nutrición personalizada con seguimiento de macronutrientes">
+    <meta name="theme-color" content="#3b82f6">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#141414">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-</head>
-<body>
-    <!-- Pantalla de carga inicial -->
-    <div id="loading-screen" style="
-        position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
-        background: linear-gradient(135deg, #141414 0%, #2a2824 100%);
-        color: #fffcf7; display: flex; flex-direction: column;
-        justify-content: center; align-items: center;
-        font-family: 'Montserrat', sans-serif; z-index: 10000;
-    ">
-        <h1 style="font-family: 'Bebas Neue', cursive; font-size: 3em; margin-bottom: 20px; letter-spacing: 2px; text-align: center;">💪 SULO FITNESS</h1>
-        <p style="font-size: 1.2em; opacity: 0.8; margin-bottom: 30px; text-align: center;">Cargando arquitectura modular...</p>
-        <div style="
-            width: 50px; height: 50px; 
-            border: 3px solid #738290; 
-            border-top: 3px solid #a1b5d8; 
-            border-radius: 50%; 
-            animation: spin 1s linear infinite;
-        "></div>
-    </div>
-
-    <!-- Contenedor principal de la aplicación -->
-    <div id="app"></div>
-
-    <!-- Scripts -->
-    <script src="app.js"></script>
-    
-    <!-- Registrar Service Worker -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/service-worker.js')
-                .then(function(registration) {
-                    console.log('✅ Service Worker registrado:', registration);
-                })
-                .catch(function(error) {
-                    console.log('❌ Error Service Worker:', error);
-                });
-            });
-        }
-    </script>
-    
-    <!-- Estilos para animaciones -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6.5 6.5h11'/><path d='M6.5 17.5h11'/><circle cx='6.5' cy='6.5' r='2.5'/><circle cx='17.5' cy='17.5' r='2.5'/></svg>">
     <style>
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
+        /* Critical CSS inline para evitar FOUC */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; 
+            background: #0f172a; 
+            color: #f8fafc; 
+            overflow-x: hidden;
         }
         
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(20px); } 
-            to { opacity: 1; transform: translateY(0); } 
+        #loading-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            animation: pulse 2s ease-in-out infinite;
         }
         
-        @keyframes slideInRight { 
-            from { transform: translateX(300px); opacity: 0; } 
-            to { transform: translateX(0); opacity: 1; } 
+        .loading-logo {
+            font-size: 3em;
+            margin-bottom: 24px;
+            filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.3));
         }
         
-        @keyframes slideOutRight { 
-            from { transform: translateX(0); opacity: 1; } 
-            to { transform: translateX(300px); opacity: 0; } 
+        .loading-title {
+            font-size: 2.5em;
+            font-weight: 800;
+            color: #f8fafc;
+            margin-bottom: 16px;
+            letter-spacing: -1px;
+            text-align: center;
         }
         
-        .app-loaded #loading-screen {
-            display: none !important;
+        .loading-subtitle {
+            color: #94a3b8;
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #334155;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .loading-progress {
+            margin-top: 24px;
+            color: #64748b;
+            font-size: 0.9em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        /* Ocultar el contenido principal inicialmente */
+        #app { display: none; }
+        .app-loaded #loading-screen { display: none !important; }
+        .app-loaded #app { display: block !important; }
+        
+        /* Error fallback */
+        .error-message {
+            background: #ef4444;
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
         }
     </style>
+</head>
+<body>
+    <!-- Pantalla de carga -->
+    <div id="loading-screen">
+        <div class="loading-logo">💪</div>
+        <h1 class="loading-title">SULO FITNESS</h1>
+        <p class="loading-subtitle">Cargando arquitectura modular...</p>
+        <div class="loading-spinner"></div>
+        <p class="loading-progress">Inicializando módulos...</p>
+    </div>
+    
+    <!-- Contenedor principal de la app -->
+    <div id="app" style="min-height: 100vh;"></div>
+    
+    <!-- Mensaje de error de respaldo -->
+    <div id="error-fallback" class="error-message">
+        <h2>⚠️ Error de Carga</h2>
+        <p>Ha ocurrido un error al cargar la aplicación. Por favor, recarga la página.</p>
+        <button onclick="window.location.reload()" style="background: white; color: #ef4444; border: none; padding: 8px 16px; border-radius: 4px; margin-top: 12px; cursor: pointer; font-weight: 600;">Recargar</button>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Manejo de errores global
+        window.addEventListener('error', function(event) {
+            console.error('Error de carga:', event.error);
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('error-fallback').style.display = 'block';
+        });
+        
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Promise rechazada:', event.reason);
+        });
+        
+        // Timeout de seguridad
+        setTimeout(function() {
+            if (document.getElementById('loading-screen').style.display !== 'none') {
+                console.warn('Timeout de carga - mostrando error');
+                document.getElementById('loading-screen').style.display = 'none';
+                document.getElementById('error-fallback').style.display = 'block';
+            }
+        }, 15000); // 15 segundos timeout
+    </script>
+    
+    <!-- App principal -->
+    <script src="app.js" defer></script>
 </body>
 </html>
