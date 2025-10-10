@@ -1,9 +1,0 @@
-{
-  "numero_comidas": 4,
-  "horarios": {
-    "desayuno": "7:30",
-    "almuerzo": "En cafetería",
-    "comida": "17:00", 
-    "cena": "Por definir"
-  }
-}
