@@ -1,6 +1,6 @@
 // ===============================================
-// SULO FITNESS - VERSIÓN FINAL COMPLETA
-// Aplicación sin errores con Service Worker integrado
+// SULO FITNESS v2.0 - APLICACIÓN COMPLETA RENOVADA
+// Enfoque moderno: macronutrientes + planificación inteligente
 // ===============================================
 
 // ===== SISTEMA PRINCIPAL =====
@@ -11,270 +11,263 @@ class SuloFitnessApp {
         this.notifications = new NotificationManager(this.theme);
         this.router = new RouterManager();
         this.user = new UserManager(this.storage);
-
+        this.nutritionAPI = new NutritionAPIService();
+        
         this.modules = new Map();
         this.workoutModule = null;
         this.nutritionModule = null;
-
         this.initialized = false;
-
+        
         this.init();
     }
 
     async init() {
         if (this.initialized) return;
-
-        console.log('Inicializando Sulo Fitness App...');
-
+        
+        console.log('Inicializando Sulo Fitness v2.0...');
+        
         if (document.readyState === 'loading') {
             await new Promise(resolve => {
                 document.addEventListener('DOMContentLoaded', resolve);
             });
         }
-
-        // Registrar Service Worker PRIMERO
+        
         await this.registerServiceWorker();
-
         this.loadFonts();
         this.theme.applyTheme();
         await this.initializeModules();
         this.setupEventListeners();
         this.setupRoutes();
         this.showMainInterface();
-
+        
         setTimeout(() => {
             const loadingScreen = document.getElementById('loading-screen');
-            if (loadingScreen) {
-                loadingScreen.style.display = 'none';
-            }
+            if (loadingScreen) loadingScreen.style.display = 'none';
             document.body.classList.add('app-loaded');
         }, 1000);
-
+        
         this.initialized = true;
-        console.log('App inicializada correctamente');
+        console.log('App v2.0 inicializada correctamente');
     }
 
-    // ===== CONFIGURACIÓN SERVICE WORKER =====
     async registerServiceWorker() {
         if ('serviceWorker' in navigator) {
             try {
-                console.log('🔧 Registrando Service Worker...');
-                const registration = await navigator.serviceWorker.register('./service-worker.js', {
-                    scope: './'
-                });
-
+                const registration = await navigator.serviceWorker.register('./service-worker.js');
                 console.log('✅ Service Worker registrado:', registration);
-
-                // Manejar actualizaciones del Service Worker
-                registration.addEventListener('updatefound', () => {
-                    console.log('🔄 Nueva versión del Service Worker disponible');
-                    const newWorker = registration.installing;
-
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed') {
-                            if (navigator.serviceWorker.controller) {
-                                // Nueva versión disponible
-                                this.showUpdateAvailable();
-                            } else {
-                                // Primera instalación
-                                console.log('📱 App lista para funcionar offline');
-                            }
-                        }
-                    });
-                });
-
-                // Escuchar mensajes del Service Worker
-                navigator.serviceWorker.addEventListener('message', (event) => {
-                    this.handleServiceWorkerMessage(event.data);
-                });
-
             } catch (error) {
                 console.error('❌ Error registrando Service Worker:', error);
             }
-        } else {
-            console.warn('⚠️ Service Workers no soportados en este navegador');
-        }
-    }
-
-    showUpdateAvailable() {
-        const colors = this.theme.getColors();
-
-        // Crear notificación de actualización
-        const updateBanner = document.createElement('div');
-        updateBanner.id = 'update-banner';
-        updateBanner.style.cssText = `
-            position: fixed; top: 0; left: 0; right: 0; z-index: 10001;
-            background: ${colors.warning}; color: ${colors.textDark};
-            padding: 16px; text-align: center; font-weight: 700;
-            font-family: 'Montserrat', sans-serif; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        `;
-
-        updateBanner.innerHTML = `
-            <span>🚀 Nueva versión disponible</span>
-            <button onclick="app.updateApp()" style="
-                background: ${colors.textDark}; color: ${colors.warning}; 
-                border: none; padding: 8px 16px; border-radius: 6px; 
-                margin-left: 12px; cursor: pointer; font-weight: 700;
-            ">ACTUALIZAR</button>
-            <button onclick="document.getElementById('update-banner').remove()" style="
-                background: transparent; color: ${colors.textDark}; 
-                border: 1px solid ${colors.textDark}; padding: 8px 16px; 
-                border-radius: 6px; margin-left: 8px; cursor: pointer; font-weight: 700;
-            ">DESPUÉS</button>
-        `;
-
-        document.body.prepend(updateBanner);
-    }
-
-    async updateApp() {
-        try {
-            // Enviar mensaje al Service Worker para que se active
-            const registration = await navigator.serviceWorker.getRegistration();
-            if (registration && registration.waiting) {
-                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-
-                // Recargar la página después de la actualización
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    window.location.reload();
-                });
-            }
-        } catch (error) {
-            console.error('Error actualizando:', error);
-            window.location.reload();
-        }
-    }
-
-    handleServiceWorkerMessage(data) {
-        switch (data.type) {
-            case 'CACHE_UPDATED':
-                this.notifications.show('Cache actualizada', 'success');
-                break;
-            case 'OFFLINE_MODE':
-                this.notifications.show('Modo offline activado', 'info');
-                break;
-            case 'ONLINE_MODE':
-                this.notifications.show('Conexión restaurada', 'success');
-                break;
-        }
-    }
-
-    // Método para limpiar cache manualmente
-    async clearCache() {
-        try {
-            const registration = await navigator.serviceWorker.getRegistration();
-            if (registration) {
-                const messageChannel = new MessageChannel();
-
-                messageChannel.port1.onmessage = (event) => {
-                    if (event.data.success) {
-                        this.notifications.show('Cache limpiada', 'success');
-                    }
-                };
-
-                registration.active.postMessage(
-                    { type: 'CLEAR_CACHE' },
-                    [messageChannel.port2]
-                );
-            }
-        } catch (error) {
-            console.error('Error limpiando cache:', error);
         }
     }
 
     loadFonts() {
         const link = document.createElement('link');
-        link.href = 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;500;600;700&display=swap';
+        link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap';
         link.rel = 'stylesheet';
         document.head.appendChild(link);
-
+        
         const style = document.createElement('style');
-        style.textContent = this.getCSSAnimations();
+        style.textContent = this.getCSSStyles();
         document.head.appendChild(style);
     }
 
-    getCSSAnimations() {
+    getCSSStyles() {
         return `
-            @keyframes fadeIn { 
-                from { opacity: 0; transform: translateY(20px); } 
-                to { opacity: 1; transform: translateY(0); } 
+            * { box-sizing: border-box; }
+            body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+            
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes slideInRight { from { transform: translateX(300px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+            @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(300px); opacity: 0; } }
+            @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+            
+            .app-loaded #loading-screen { display: none !important; }
+            
+            .macro-card {
+                background: var(--card-bg); 
+                border-radius: 16px; 
+                padding: 20px; 
+                margin: 12px 0;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                border: 2px solid transparent;
+                transition: all 0.3s ease;
             }
-            @keyframes slideInRight { 
-                from { transform: translateX(300px); opacity: 0; } 
-                to { transform: translateX(0); opacity: 1; } 
+            
+            .macro-card.target-met { border-color: #10b981; }
+            .macro-card.target-over { border-color: #ef4444; }
+            .macro-card.target-under { border-color: #f59e0b; }
+            
+            .meal-card {
+                background: var(--card-bg);
+                border-radius: 12px;
+                padding: 20px;
+                margin: 16px 0;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                border-left: 4px solid var(--accent-color);
             }
-            @keyframes slideOutRight { 
-                from { transform: translateX(0); opacity: 1; } 
-                to { transform: translateX(300px); opacity: 0; } 
+            
+            .exercise-card {
+                background: var(--card-bg);
+                border-radius: 12px;
+                padding: 24px;
+                margin: 20px 0;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                border-left: 4px solid var(--primary-color);
             }
-            .app-loaded #loading-screen {
-                display: none !important;
+            
+            .btn-primary {
+                background: var(--primary-color);
+                color: white;
+                border: none;
+                padding: 14px 28px;
+                border-radius: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-family: 'Inter', sans-serif;
+                font-size: 14px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }
-            .offline-indicator {
-                position: fixed; bottom: 20px; left: 20px; z-index: 9999;
-                background: #ff6b6b; color: white; padding: 8px 16px;
-                border-radius: 20px; font-size: 0.9em; font-weight: 600;
+            
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            }
+            
+            .btn-secondary {
+                background: var(--secondary-color);
+                color: var(--text-dark);
+                border: none;
+                padding: 12px 24px;
+                border-radius: 10px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-family: 'Inter', sans-serif;
+                font-size: 14px;
+            }
+            
+            .btn-danger {
+                background: #ef4444;
+                color: white;
+                border: none;
+                padding: 10px 16px;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 13px;
+                transition: all 0.3s ease;
+            }
+            
+            .btn-warning {
+                background: #f59e0b;
+                color: white;
+                border: none;
+                padding: 10px 16px;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 13px;
+                transition: all 0.3s ease;
+            }
+            
+            .btn-success {
+                background: #10b981;
+                color: white;
+                border: none;
+                padding: 10px 16px;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 13px;
+                transition: all 0.3s ease;
+            }
+            
+            .input-modern {
+                border: 2px solid var(--border-color);
+                border-radius: 10px;
+                padding: 12px 16px;
+                font-size: 15px;
+                background: var(--input-bg);
+                color: var(--text-primary);
+                transition: all 0.3s ease;
+                font-family: 'Inter', sans-serif;
+            }
+            
+            .input-modern:focus {
+                outline: none;
+                border-color: var(--primary-color);
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            }
+            
+            .autocomplete-container { position: relative; width: 100%; }
+            
+            .autocomplete-suggestions {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--card-bg);
+                border: 2px solid var(--border-color);
+                border-top: none;
+                border-radius: 0 0 10px 10px;
+                max-height: 200px;
+                overflow-y: auto;
+                z-index: 1000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            }
+            
+            .autocomplete-suggestion {
+                padding: 12px 16px;
+                cursor: pointer;
+                border-bottom: 1px solid var(--border-color);
+                transition: background-color 0.2s ease;
+            }
+            
+            .autocomplete-suggestion:hover,
+            .autocomplete-suggestion.highlighted {
+                background: var(--hover-bg);
+            }
+            
+            .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+            .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+            
+            @media (max-width: 768px) {
+                .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; gap: 16px; }
+                .macro-card { padding: 16px; }
+                .meal-card { padding: 16px; }
+                .exercise-card { padding: 20px; }
             }
         `;
     }
 
     async initializeModules() {
         const preferences = this.user.getPreferences();
-
+        
         if (preferences.workoutEnabled) {
             this.workoutModule = new WorkoutModule(this);
             this.modules.set('workout', this.workoutModule);
             await this.workoutModule.init();
         }
-
+        
         if (preferences.nutritionEnabled) {
             this.nutritionModule = new NutritionModule(this);
             this.modules.set('nutrition', this.nutritionModule);
             await this.nutritionModule.init();
         }
-
-        console.log('Módulos inicializados:', Array.from(this.modules.keys()));
     }
 
     setupEventListeners() {
         window.addEventListener('preferences-updated', (event) => {
             this.onPreferencesUpdated(event.detail);
         });
-
+        
         window.addEventListener('theme-changed', (event) => {
             this.onThemeChanged(event.detail);
         });
-
-        // Detectar estado de conexión
-        window.addEventListener('online', () => {
-            this.removeOfflineIndicator();
-            this.notifications.show('Conexión restaurada', 'success');
-        });
-
-        window.addEventListener('offline', () => {
-            this.showOfflineIndicator();
-            this.notifications.show('Modo offline', 'warning');
-        });
-
-        // Verificar estado inicial
-        if (!navigator.onLine) {
-            this.showOfflineIndicator();
-        }
-    }
-
-    showOfflineIndicator() {
-        if (document.querySelector('.offline-indicator')) return;
-
-        const indicator = document.createElement('div');
-        indicator.className = 'offline-indicator';
-        indicator.innerHTML = '📶 Sin conexión - Modo offline';
-        document.body.appendChild(indicator);
-    }
-
-    removeOfflineIndicator() {
-        const indicator = document.querySelector('.offline-indicator');
-        if (indicator) {
-            indicator.remove();
-        }
     }
 
     setupRoutes() {
@@ -290,12 +283,21 @@ class SuloFitnessApp {
     }
 
     onThemeChanged(colors) {
-        console.log('Tema cambiado:', colors);
+        document.documentElement.style.setProperty('--primary-color', colors.primary);
+        document.documentElement.style.setProperty('--secondary-color', colors.secondary);
+        document.documentElement.style.setProperty('--accent-color', colors.accent);
+        document.documentElement.style.setProperty('--card-bg', colors.background);
+        document.documentElement.style.setProperty('--text-primary', colors.text);
+        document.documentElement.style.setProperty('--text-dark', colors.textDark);
+        document.documentElement.style.setProperty('--text-secondary', colors.textSecondary);
+        document.documentElement.style.setProperty('--border-color', colors.border);
+        document.documentElement.style.setProperty('--input-bg', colors.background);
+        document.documentElement.style.setProperty('--hover-bg', colors.secondary + '40');
     }
 
     async reinitializeModules() {
         const preferences = this.user.getPreferences();
-
+        
         if (preferences.workoutEnabled && !this.workoutModule) {
             this.workoutModule = new WorkoutModule(this);
             this.modules.set('workout', this.workoutModule);
@@ -304,7 +306,7 @@ class SuloFitnessApp {
             this.modules.delete('workout');
             this.workoutModule = null;
         }
-
+        
         if (preferences.nutritionEnabled && !this.nutritionModule) {
             this.nutritionModule = new NutritionModule(this);
             this.modules.set('nutrition', this.nutritionModule);
@@ -321,102 +323,102 @@ class SuloFitnessApp {
 
     showMainInterface() {
         const colors = this.theme.getColors();
-
+        this.onThemeChanged(colors);
+        
         const appContainer = document.getElementById('app');
         if (appContainer) {
             appContainer.innerHTML = this.getMainInterfaceHTML(colors);
         }
-
+        
         document.body.style.backgroundColor = colors.primary;
         document.body.style.color = colors.text;
-        document.body.style.fontFamily = "'Montserrat', sans-serif";
-
+        
         if (!this.router.getCurrentRoute() || this.router.getCurrentRoute() === '') {
             setTimeout(() => this.navigate('inicio'), 100);
         }
     }
 
     getMainInterfaceHTML(colors) {
-        const headerHTML = `
-            <header style="background: ${colors.primary}; color: ${colors.text}; padding: 32px 20px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.08); font-family: 'Bebas Neue', cursive;">
-                <h1 style="margin: 0; font-size: 3em; font-weight: 400; letter-spacing: 2px; color: ${colors.text};">💪 SULO FITNESS</h1>
-                <p style="margin: 12px 0 0 0; color: ${colors.textSecondary}; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 1.1em;">Tu entrenador personal avanzado</p>
+        return `
+            <header style="background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%); color: white; padding: 24px 20px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+                <h1 style="margin: 0; font-size: 2.5em; font-weight: 800; letter-spacing: -1px; color: white; font-family: 'Poppins', sans-serif;">💪 SULO FITNESS</h1>
+                <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.9); font-weight: 500; font-size: 1.05em;">Tu asistente inteligente de fitness y nutrición</p>
             </header>
-        `;
-
-        const navHTML = `
-            <nav style="background: ${colors.secondary}; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.05);">
-                <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; font-family: 'Montserrat', sans-serif;">
-                    <button onclick="app.navigate('inicio')" id="btn-inicio" style="background: ${colors.accent}; color: ${colors.textDark}; border: none; padding: 14px 24px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14px; text-transform: uppercase; min-width: 110px;">🏠 INICIO</button>
-                    <button onclick="app.navigate('diaria')" id="btn-diaria" style="background: ${colors.accent}; color: ${colors.textDark}; border: none; padding: 14px 24px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14px; text-transform: uppercase; min-width: 110px;">📅 DIARIA</button>
-                    <button onclick="app.navigate('semanal')" id="btn-semanal" style="background: ${colors.accent}; color: ${colors.textDark}; border: none; padding: 14px 24px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14px; text-transform: uppercase; min-width: 110px;">📊 SEMANAL</button>
-                    <button onclick="app.navigate('mensual')" id="btn-mensual" style="background: ${colors.accent}; color: ${colors.textDark}; border: none; padding: 14px 24px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14px; text-transform: uppercase; min-width: 110px;">📆 MENSUAL</button>
-                    <button onclick="app.navigate('configuracion')" id="btn-config" style="background: ${colors.accent}; color: ${colors.textDark}; border: none; padding: 14px 24px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14px; text-transform: uppercase; min-width: 110px;">⚙️ CONFIG</button>
+            
+            <nav style="background: ${colors.background}; padding: 16px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-bottom: 1px solid ${colors.border};">
+                <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; max-width: 800px; margin: 0 auto;">
+                    <button onclick="app.navigate('inicio')" id="btn-inicio" class="nav-btn" style="background: ${colors.accent}; color: white; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 100px; transition: all 0.3s ease;">🏠 INICIO</button>
+                    <button onclick="app.navigate('diaria')" id="btn-diaria" class="nav-btn" style="background: ${colors.accent}; color: white; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 100px; transition: all 0.3s ease;">📅 DIARIA</button>
+                    <button onclick="app.navigate('semanal')" id="btn-semanal" class="nav-btn" style="background: ${colors.accent}; color: white; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 100px; transition: all 0.3s ease;">📊 SEMANAL</button>
+                    <button onclick="app.navigate('mensual')" id="btn-mensual" class="nav-btn" style="background: ${colors.accent}; color: white; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 100px; transition: all 0.3s ease;">📆 MENSUAL</button>
+                    <button onclick="app.navigate('configuracion')" id="btn-config" class="nav-btn" style="background: ${colors.accent}; color: white; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 100px; transition: all 0.3s ease;">⚙️ CONFIG</button>
                 </div>
             </nav>
+            
+            <main id="main-content" style="padding: 32px 20px; background: ${colors.primary}; color: ${colors.text}; min-height: calc(100vh - 200px); max-width: 1200px; margin: 0 auto; line-height: 1.6;"></main>
         `;
-
-        const mainHTML = `
-            <main id="main-content" style="padding: 40px 24px; background: ${colors.primary}; color: ${colors.text}; min-height: calc(100vh - 180px); max-width: 1400px; margin: 0 auto; font-family: 'Montserrat', sans-serif;"></main>
-        `;
-
-        return headerHTML + navHTML + mainHTML;
     }
 
     showWelcomeView() {
         const container = document.getElementById('main-content');
         if (!container) return;
-
+        
         const colors = this.theme.getColors();
         const profile = this.user.getProfile();
         const preferences = this.user.getPreferences();
-
+        
         this.updateActiveButton('inicio');
 
-        container.innerHTML = this.getWelcomeHTML(colors, profile, preferences);
-    }
-
-    getWelcomeHTML(colors, profile, preferences) {
-        return `
-            <div style="text-align: center; animation: fadeIn 0.6s ease-out; font-family: 'Montserrat', sans-serif;">
-                <h2 style="color: ${colors.text}; font-size: 2.8em; margin-bottom: 32px; font-weight: 400; font-family: 'Bebas Neue', cursive; letter-spacing: 2px;">¡HOLA ${profile.nombre.toUpperCase()}! 👋</h2>
-
-                <div style="background: ${colors.background}; padding: 40px; border-radius: 24px; margin: 40px auto; max-width: 700px; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
-                    <p style="margin: 0; font-size: 1.6em; color: ${colors.textDark}; font-weight: 600;">🚀 SISTEMA AVANZADO</p>
-                    <p style="margin: 16px 0 0 0; color: ${colors.textSecondary}; font-size: 1.2em; font-weight: 500;">Planes completamente editables con seguimiento en tiempo real</p>
-                    <div style="margin-top: 20px;">
-                        <span style="background: ${colors.success}; color: ${colors.textDark}; padding: 6px 12px; border-radius: 15px; font-size: 0.9em; font-weight: 700;">📱 PWA READY</span>
-                        <span style="background: ${colors.accent}; color: ${colors.textDark}; padding: 6px 12px; border-radius: 15px; font-size: 0.9em; font-weight: 700; margin-left: 8px;">🔄 OFFLINE</span>
+        container.innerHTML = `
+            <div style="animation: fadeIn 0.6s ease-out; max-width: 1000px; margin: 0 auto;">
+                <div style="text-align: center; margin-bottom: 40px;">
+                    <h2 style="color: ${colors.text}; font-size: 2.5em; margin-bottom: 16px; font-weight: 700; font-family: 'Poppins', sans-serif;">¡Hola ${profile.nombre}! 👋</h2>
+                    <p style="color: ${colors.textSecondary}; font-size: 1.2em; margin: 0; font-weight: 500;">Tu nueva experiencia de fitness inteligente</p>
+                </div>
+                
+                <div class="macro-card" style="background: linear-gradient(135deg, ${colors.background} 0%, ${colors.secondary}40 100%); text-align: center; margin-bottom: 40px;">
+                    <h3 style="color: ${colors.textDark}; font-size: 1.8em; margin-bottom: 16px; font-weight: 700; font-family: 'Poppins', sans-serif;">🚀 Nueva Experiencia v2.0</h3>
+                    <p style="color: ${colors.textDark}; font-size: 1.1em; margin-bottom: 20px; opacity: 0.9;">Seguimiento inteligente de macronutrientes y planificación automática</p>
+                    <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+                        <span style="background: #10b98130; color: #059669; padding: 8px 16px; border-radius: 20px; font-size: 0.9em; font-weight: 700; border: 2px solid #10b981;">📊 MACROS INTELIGENTES</span>
+                        <span style="background: #3b82f630; color: #2563eb; padding: 8px 16px; border-radius: 20px; font-size: 0.9em; font-weight: 700; border: 2px solid #3b82f6;">🎯 PLANIFICACIÓN AUTO</span>
+                        <span style="background: #f59e0b30; color: #d97706; padding: 8px 16px; border-radius: 20px; font-size: 0.9em; font-weight: 700; border: 2px solid #f59e0b;">📱 PWA READY</span>
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; margin: 50px 0;">
-                    ${preferences.workoutEnabled ? `
-                        <div style="background: ${colors.background}; padding: 36px; border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); cursor: pointer;" onclick="app.navigate('workout')">
-                            <h3 style="color: ${colors.textDark}; margin-bottom: 20px; font-size: 1.6em; font-family: 'Bebas Neue', cursive;">💪 EJERCICIOS AVANZADOS</h3>
-                            <p style="color: ${colors.textSecondary}; margin: 0; font-weight: 500;">Seguimiento de pesos, series editables, histórico completo</p>
-                        </div>
-                    ` : ''}
-
+                <div class="grid-2">
                     ${preferences.nutritionEnabled ? `
-                        <div style="background: ${colors.background}; padding: 36px; border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); cursor: pointer;" onclick="app.navigate('nutrition')">
-                            <h3 style="color: ${colors.textDark}; margin-bottom: 20px; font-size: 1.6em; font-family: 'Bebas Neue', cursive;">🍽️ NUTRICIÓN COMPLETA</h3>
-                            <p style="color: ${colors.textSecondary}; margin: 0; font-weight: 500;">Planes editables, seguimiento en tiempo real</p>
+                        <div class="macro-card" style="cursor: pointer; transition: transform 0.3s ease;" onclick="app.navigate('diaria')" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5em; margin-right: 16px;">🍽️</div>
+                                <div>
+                                    <h3 style="color: ${colors.textDark}; margin: 0 0 4px 0; font-size: 1.4em; font-weight: 700;">Nutrición Inteligente</h3>
+                                    <p style="color: ${colors.textSecondary}; margin: 0; font-size: 0.95em;">Macronutrientes en tiempo real</p>
+                                </div>
+                            </div>
                         </div>
                     ` : ''}
-
-                    <div style="background: ${colors.background}; padding: 36px; border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); cursor: pointer;" onclick="app.navigate('configuracion')">
-                        <h3 style="color: ${colors.textDark}; margin-bottom: 20px; font-size: 1.6em; font-family: 'Bebas Neue', cursive;">⚙️ CONFIGURACIÓN</h3>
-                        <p style="color: ${colors.textSecondary}; margin: 0; font-weight: 500;">Personaliza módulos y preferencias</p>
-                    </div>
+                    
+                    ${preferences.workoutEnabled ? `
+                        <div class="macro-card" style="cursor: pointer; transition: transform 0.3s ease;" onclick="app.navigate('diaria')" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                                <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5em; margin-right: 16px;">💪</div>
+                                <div>
+                                    <h3 style="color: ${colors.textDark}; margin: 0 0 4px 0; font-size: 1.4em; font-weight: 700;">Entrenamiento Avanzado</h3>
+                                    <p style="color: ${colors.textSecondary}; margin: 0; font-size: 0.95em;">Planificación automática</p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
-
-                <div style="margin-top: 50px;">
-                    <button onclick="app.theme.toggleTheme(); app.showMainInterface(); app.showWelcomeView();" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 20px 40px; border-radius: 16px; cursor: pointer; font-size: 18px; font-weight: 700; margin: 12px; font-family: 'Montserrat', sans-serif; text-transform: uppercase;">
-                        ${this.theme.currentTheme === 'dark' ? '☀️ MODO CLARO' : '🌙 MODO OSCURO'}
+                
+                <div style="text-align: center; margin-top: 40px;">
+                    <button onclick="app.navigate('diaria')" class="btn-primary" style="font-size: 18px; padding: 16px 32px; margin: 8px; animation: pulse 2s infinite;">
+                        📅 Comenzar Hoy
                     </button>
-                    <button onclick="app.navigate('diaria')" style="background: ${colors.accent}; color: ${colors.textDark}; border: none; padding: 20px 40px; border-radius: 16px; cursor: pointer; font-size: 18px; font-weight: 700; margin: 12px; font-family: 'Montserrat', sans-serif; text-transform: uppercase;">📅 EMPEZAR</button>
-                    <button onclick="app.clearCache()" style="background: ${colors.warning}; color: ${colors.textDark}; border: none; padding: 20px 40px; border-radius: 16px; cursor: pointer; font-size: 18px; font-weight: 700; margin: 12px; font-family: 'Montserrat', sans-serif; text-transform: uppercase;">🗑️ LIMPIAR CACHE</button>
+                    <button onclick="app.theme.toggleTheme(); app.showMainInterface(); app.showWelcomeView();" class="btn-secondary" style="font-size: 16px; padding: 12px 24px; margin: 8px;">
+                        ${this.theme.currentTheme === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Oscuro'}
+                    </button>
                 </div>
             </div>
         `;
@@ -425,61 +427,66 @@ class SuloFitnessApp {
     showDailyView() {
         const container = document.getElementById('main-content');
         if (!container) return;
-
+        
         const colors = this.theme.getColors();
         const preferences = this.user.getPreferences();
-
+        
         this.updateActiveButton('diaria');
 
-        container.innerHTML = this.getDailyViewHTML(colors, preferences);
+        if (preferences.nutritionEnabled && preferences.workoutEnabled) {
+            this.showCombinedDailyView(container, colors);
+        } else if (preferences.nutritionEnabled) {
+            this.nutritionModule.showDailyView();
+        } else if (preferences.workoutEnabled) {
+            this.workoutModule.showDailyView();
+        } else {
+            this.showEmptyDailyView(container, colors);
+        }
     }
 
-    getDailyViewHTML(colors, preferences) {
+    showCombinedDailyView(container, colors) {
         const today = new Date();
         const dayName = today.toLocaleDateString('es-ES', { weekday: 'long' });
         const dayNumber = today.getDate();
+        const monthName = today.toLocaleDateString('es-ES', { month: 'long' });
 
-        return `
+        container.innerHTML = `
             <div style="animation: fadeIn 0.6s ease-out;">
-                <div style="margin-bottom: 24px;">
-                    <button onclick="app.navigate('inicio')" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 700;">← INICIO</button>
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <h2 style="color: ${colors.text}; font-size: 2.2em; margin-bottom: 8px; font-weight: 700; font-family: 'Poppins', sans-serif; text-transform: capitalize;">${dayName}, ${dayNumber} de ${monthName}</h2>
+                    <p style="color: ${colors.textSecondary}; font-size: 1.1em; margin: 0;">Tu plan personalizado para hoy</p>
                 </div>
-                <h2 style="color: ${colors.text}; text-align: center; margin-bottom: 40px; font-family: 'Bebas Neue', cursive; font-size: 3em;">📅 ${dayName.toUpperCase()} (${dayNumber})</h2>
-
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 32px; max-width: 1200px; margin: 0 auto;">
-                    ${preferences.workoutEnabled ? `
-                        <div style="background: ${colors.background}; padding: 36px; border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
-                            <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-size: 2em; font-family: 'Bebas Neue', cursive;">💪 ENTRENAMIENTO</h3>
-                            <div style="margin-bottom: 24px;">
-                                <div style="margin: 12px 0; display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid ${colors.border};">
-                                    <strong style="color: ${colors.textDark};">Plan:</strong>
-                                    <span style="color: ${colors.textSecondary}; font-weight: 600;">PERSONALIZADO</span>
-                                </div>
-                                <div style="margin: 12px 0; display: flex; justify-content: space-between; padding: 12px 0;">
-                                    <strong style="color: ${colors.textDark};">Estado:</strong>
-                                    <span style="color: ${colors.textSecondary}; font-weight: 600;">LISTO</span>
-                                </div>
-                            </div>
-                            <button onclick="app.navigate('workout')" style="width: 100%; background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 18px; border-radius: 12px; cursor: pointer; font-weight: 700; text-transform: uppercase;">IR AL MÓDULO</button>
+                
+                <div class="grid-2">
+                    <div class="macro-card" style="cursor: pointer;" onclick="app.nutritionModule.showDailyView()">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                            <h3 style="color: ${colors.textDark}; margin: 0; font-size: 1.5em; font-weight: 700;">🍽️ Nutrición</h3>
+                            <span style="background: #10b981; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8em; font-weight: 700;">ACTIVO</span>
                         </div>
-                    ` : ''}
-
-                    ${preferences.nutritionEnabled ? `
-                        <div style="background: ${colors.background}; padding: 36px; border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
-                            <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-size: 2em; font-family: 'Bebas Neue', cursive;">🍽️ NUTRICIÓN</h3>
-                            <div style="margin-bottom: 24px;">
-                                <div style="margin: 12px 0; display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid ${colors.border};">
-                                    <strong style="color: ${colors.textDark};">Plan:</strong>
-                                    <span style="color: ${colors.textSecondary}; font-weight: 600;">EDITABLE</span>
-                                </div>
-                                <div style="margin: 12px 0; display: flex; justify-content: space-between; padding: 12px 0;">
-                                    <strong style="color: ${colors.textDark};">Estado:</strong>
-                                    <span style="color: ${colors.textSecondary}; font-weight: 600;">OPTIMIZADO</span>
-                                </div>
-                            </div>
-                            <button onclick="app.navigate('nutrition')" style="width: 100%; background: ${colors.accent}; color: ${colors.textDark}; border: none; padding: 18px; border-radius: 12px; cursor: pointer; font-weight: 700; text-transform: uppercase;">IR AL MÓDULO</button>
+                        <p style="color: ${colors.textSecondary}; margin-bottom: 20px;">Seguimiento de macronutrientes</p>
+                        <button class="btn-primary" style="width: 100%;">Ver Nutrición Diaria</button>
+                    </div>
+                    
+                    <div class="macro-card" style="cursor: pointer;" onclick="app.workoutModule.showDailyView()">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                            <h3 style="color: ${colors.textDark}; margin: 0; font-size: 1.5em; font-weight: 700;">💪 Entrenamiento</h3>
+                            <span style="background: #3b82f6; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8em; font-weight: 700;">ACTIVO</span>
                         </div>
-                    ` : ''}
+                        <p style="color: ${colors.textSecondary}; margin-bottom: 20px;">Plan de ejercicios personalizado</p>
+                        <button class="btn-primary" style="width: 100%;">Ver Entrenamiento</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    showEmptyDailyView(container, colors) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 80px 20px;">
+                <div class="macro-card">
+                    <h2 style="color: ${colors.textSecondary}; font-family: 'Poppins', sans-serif; font-size: 2.2em; margin-bottom: 20px;">⚠️ No hay módulos activos</h2>
+                    <p style="color: ${colors.textSecondary}; font-size: 1.2em; margin-bottom: 32px;">Habilita al menos un módulo desde configuración</p>
+                    <button onclick="app.navigate('configuracion')" class="btn-primary">IR A CONFIGURACIÓN</button>
                 </div>
             </div>
         `;
@@ -488,42 +495,45 @@ class SuloFitnessApp {
     showWeeklyView() {
         const container = document.getElementById('main-content');
         if (!container) return;
-
-        const colors = this.theme.getColors();
+        
+        const preferences = this.user.getPreferences();
         this.updateActiveButton('semanal');
 
-        container.innerHTML = `
-            <div style="animation: fadeIn 0.6s ease-out;">
-                <div style="margin-bottom: 24px;">
-                    <button onclick="app.navigate('inicio')" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 700;">← INICIO</button>
-                </div>
-                <h2 style="color: ${colors.text}; text-align: center; margin-bottom: 40px; font-family: 'Bebas Neue', cursive; font-size: 3em;">📊 VISTA SEMANAL</h2>
-
-                <div style="text-align: center; padding: 60px; background: ${colors.background}; border-radius: 20px;">
-                    <h3 style="color: ${colors.textDark}; font-family: 'Bebas Neue', cursive; font-size: 2em; margin-bottom: 20px;">🚧 EN DESARROLLO</h3>
-                    <p style="color: ${colors.textSecondary}; font-size: 1.1em;">Vista semanal próximamente</p>
-                </div>
-            </div>
-        `;
+        if (preferences.workoutEnabled) {
+            this.workoutModule.showWeeklyView();
+        } else if (preferences.nutritionEnabled) {
+            this.nutritionModule.showWeeklyView();
+        } else {
+            this.showEmptyView(container, 'semanal');
+        }
     }
 
     showMonthlyView() {
         const container = document.getElementById('main-content');
         if (!container) return;
-
-        const colors = this.theme.getColors();
+        
+        const preferences = this.user.getPreferences();
         this.updateActiveButton('mensual');
 
-        container.innerHTML = `
-            <div style="animation: fadeIn 0.6s ease-out;">
-                <div style="margin-bottom: 24px;">
-                    <button onclick="app.navigate('inicio')" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 700;">← INICIO</button>
-                </div>
-                <h2 style="color: ${colors.text}; text-align: center; margin-bottom: 40px; font-family: 'Bebas Neue', cursive; font-size: 3em;">📆 VISTA MENSUAL</h2>
+        if (preferences.workoutEnabled) {
+            this.workoutModule.showMonthlyView();
+        } else if (preferences.nutritionEnabled) {
+            this.nutritionModule.showMonthlyView();
+        } else {
+            this.showEmptyView(container, 'mensual');
+        }
+    }
 
-                <div style="text-align: center; padding: 60px; background: ${colors.background}; border-radius: 20px;">
-                    <h3 style="color: ${colors.textDark}; font-family: 'Bebas Neue', cursive; font-size: 2em; margin-bottom: 20px;">🚧 EN DESARROLLO</h3>
-                    <p style="color: ${colors.textSecondary}; font-size: 1.1em;">Calendario mensual próximamente</p>
+    showEmptyView(container, viewType) {
+        const colors = this.theme.getColors();
+        const viewNames = { semanal: 'Semanal', mensual: 'Mensual' };
+        
+        container.innerHTML = `
+            <div style="text-align: center; padding: 80px 20px;">
+                <div class="macro-card">
+                    <h2 style="color: ${colors.textSecondary}; font-family: 'Poppins', sans-serif; font-size: 2.2em; margin-bottom: 20px;">⚠️ No hay módulos activos</h2>
+                    <p style="color: ${colors.textSecondary}; font-size: 1.2em; margin-bottom: 32px;">Habilita al menos un módulo para ver la vista ${viewNames[viewType].toLowerCase()}</p>
+                    <button onclick="app.navigate('configuracion')" class="btn-primary">IR A CONFIGURACIÓN</button>
                 </div>
             </div>
         `;
@@ -532,45 +542,56 @@ class SuloFitnessApp {
     showConfigView() {
         const container = document.getElementById('main-content');
         if (!container) return;
-
+        
         const colors = this.theme.getColors();
         const preferences = this.user.getPreferences();
-
+        
         this.updateActiveButton('configuracion');
 
-        container.innerHTML = this.getConfigHTML(colors, preferences);
-    }
-
-    getConfigHTML(colors, preferences) {
-        return `
+        container.innerHTML = `
             <div style="animation: fadeIn 0.6s ease-out;">
-                <div style="margin-bottom: 24px;">
-                    <button onclick="app.navigate('inicio')" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 700;">← INICIO</button>
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <h2 style="color: ${colors.text}; font-size: 2.2em; margin-bottom: 8px; font-weight: 700; font-family: 'Poppins', sans-serif;">⚙️ Configuración</h2>
+                    <p style="color: ${colors.textSecondary}; font-size: 1.1em; margin: 0;">Personaliza tu experiencia</p>
                 </div>
-                <h2 style="color: ${colors.text}; text-align: center; margin-bottom: 40px; font-family: 'Bebas Neue', cursive; font-size: 3em;">⚙️ CONFIGURACIÓN</h2>
-
-                <div style="background: ${colors.background}; padding: 32px; border-radius: 20px; margin-bottom: 32px; text-align: center;">
-                    <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-family: 'Bebas Neue', cursive; font-size: 2em;">🎨 TEMA</h3>
-                    <div style="display: flex; justify-content: center; gap: 20px;">
-                        <button onclick="app.setTheme('dark')" style="background: ${this.theme.currentTheme === 'dark' ? colors.accent : colors.textSecondary}; color: ${colors.textDark}; border: none; padding: 16px 32px; border-radius: 12px; cursor: pointer; font-weight: 700; text-transform: uppercase;">🌙 OSCURO</button>
-                        <button onclick="app.setTheme('light')" style="background: ${this.theme.currentTheme === 'light' ? colors.secondary : colors.textSecondary}; color: ${colors.textDark}; border: none; padding: 16px 32px; border-radius: 12px; cursor: pointer; font-weight: 700; text-transform: uppercase;">☀️ CLARO</button>
+                
+                <div class="macro-card">
+                    <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-family: 'Poppins', sans-serif; font-size: 1.5em; font-weight: 700;">🎨 Apariencia</h3>
+                    <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+                        <button onclick="app.setTheme('dark')" class="btn-secondary" style="background: ${this.theme.currentTheme === 'dark' ? colors.accent : colors.textSecondary}; color: white; padding: 16px 24px;">🌙 Tema Oscuro</button>
+                        <button onclick="app.setTheme('light')" class="btn-secondary" style="background: ${this.theme.currentTheme === 'light' ? colors.accent : colors.textSecondary}; color: ${this.theme.currentTheme === 'light' ? 'white' : colors.textDark}; padding: 16px 24px;">☀️ Tema Claro</button>
                     </div>
                 </div>
-
-                <div style="background: ${colors.background}; padding: 32px; border-radius: 20px; margin-bottom: 32px; text-align: center;">
-                    <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-family: 'Bebas Neue', cursive; font-size: 2em;">📋 MÓDULOS</h3>
-                    <div style="display: flex; justify-content: center; gap: 20px;">
-                        <button onclick="app.toggleModule('workout')" style="background: ${preferences.workoutEnabled ? colors.accent : colors.textSecondary}; color: ${colors.textDark}; border: none; padding: 16px 32px; border-radius: 12px; cursor: pointer; font-weight: 700; text-transform: uppercase;">💪 EJERCICIOS</button>
-                        <button onclick="app.toggleModule('nutrition')" style="background: ${preferences.nutritionEnabled ? colors.secondary : colors.textSecondary}; color: ${colors.textDark}; border: none; padding: 16px 32px; border-radius: 12px; cursor: pointer; font-weight: 700; text-transform: uppercase;">🍽️ NUTRICIÓN</button>
+                
+                <div class="macro-card">
+                    <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-family: 'Poppins', sans-serif; font-size: 1.5em; font-weight: 700;">📋 Módulos</h3>
+                    <div class="grid-2">
+                        <div style="text-align: center;">
+                            <div style="margin-bottom: 16px;">
+                                <div style="background: ${preferences.nutritionEnabled ? '#10b981' : '#6b7280'}; color: white; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 0 auto 12px;">🍽️</div>
+                                <h4 style="margin: 0 0 8px 0; color: ${colors.textDark}; font-weight: 700;">Nutrición</h4>
+                                <p style="margin: 0 0 16px 0; color: ${colors.textSecondary}; font-size: 0.9em;">Seguimiento de macronutrientes</p>
+                            </div>
+                            <button onclick="app.toggleModule('nutrition')" class="btn-secondary" style="background: ${preferences.nutritionEnabled ? '#10b981' : '#6b7280'}; color: white; font-weight: 700;">
+                                ${preferences.nutritionEnabled ? 'ACTIVADO' : 'DESACTIVADO'}
+                            </button>
+                        </div>
+                        
+                        <div style="text-align: center;">
+                            <div style="margin-bottom: 16px;">
+                                <div style="background: ${preferences.workoutEnabled ? '#3b82f6' : '#6b7280'}; color: white; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 0 auto 12px;">💪</div>
+                                <h4 style="margin: 0 0 8px 0; color: ${colors.textDark}; font-weight: 700;">Entrenamiento</h4>
+                                <p style="margin: 0 0 16px 0; color: ${colors.textSecondary}; font-size: 0.9em;">Planificación de ejercicios</p>
+                            </div>
+                            <button onclick="app.toggleModule('workout')" class="btn-secondary" style="background: ${preferences.workoutEnabled ? '#3b82f6' : '#6b7280'}; color: white; font-weight: 700;">
+                                ${preferences.workoutEnabled ? 'ACTIVADO' : 'DESACTIVADO'}
+                            </button>
+                        </div>
                     </div>
                 </div>
-
-                <div style="background: ${colors.background}; padding: 32px; border-radius: 20px; text-align: center;">
-                    <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-family: 'Bebas Neue', cursive; font-size: 2em;">🔧 SISTEMA</h3>
-                    <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
-                        <button onclick="app.clearCache()" style="background: ${colors.warning}; color: ${colors.textDark}; border: none; padding: 16px 32px; border-radius: 12px; cursor: pointer; font-weight: 700; text-transform: uppercase;">🗑️ LIMPIAR CACHE</button>
-                        <button onclick="window.location.reload()" style="background: ${colors.danger}; color: white; border: none; padding: 16px 32px; border-radius: 12px; cursor: pointer; font-weight: 700; text-transform: uppercase;">🔄 RECARGAR APP</button>
-                    </div>
+                
+                <div style="text-align: center; margin-top: 32px;">
+                    <button onclick="app.navigate('inicio')" class="btn-primary">Volver al Inicio</button>
                 </div>
             </div>
         `;
@@ -586,63 +607,1093 @@ class SuloFitnessApp {
         const preferences = this.user.getPreferences();
         const newPreferences = { ...preferences };
         newPreferences[moduleName + 'Enabled'] = !preferences[moduleName + 'Enabled'];
-
+        
         this.user.updatePreferences(newPreferences);
-        this.notifications.show(`Módulo ${moduleName} ${newPreferences[moduleName + 'Enabled'] ? 'habilitado' : 'deshabilitado'}`, 'info');
-
+        this.notifications.show(`Módulo ${moduleName} ${newPreferences[moduleName + 'Enabled'] ? 'activado' : 'desactivado'}`, 'info');
+        
         this.reinitializeModules().then(() => {
             this.showConfigView();
         });
     }
 
     updateActiveButton(activeView) {
-        const buttons = document.querySelectorAll('button[id^="btn-"]');
+        const buttons = document.querySelectorAll('.nav-btn');
         const colors = this.theme.getColors();
-
+        
         buttons.forEach(btn => {
             if (btn) {
                 btn.style.background = colors.accent;
-                btn.style.opacity = '0.8';
+                btn.style.opacity = '0.7';
+                btn.style.transform = 'none';
+                btn.style.boxShadow = 'none';
             }
         });
-
+        
         const activeButton = document.getElementById('btn-' + activeView);
         if (activeButton) {
             activeButton.style.background = colors.secondary;
             activeButton.style.opacity = '1';
+            activeButton.style.transform = 'translateY(-2px)';
+            activeButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
         }
     }
 }
 
-// ===== SISTEMA DE TEMAS =====
+// ===== MÓDULO DE NUTRICIÓN RENOVADO =====
+class NutritionModule extends BaseModule {
+    constructor(app) {
+        super('nutrition', app);
+        this.dailyIntake = {};
+        this.meals = [];
+    }
+
+    async onInit() {
+        this.loadData();
+    }
+
+    registerRoutes() {
+        this.app.router.register('nutrition-daily', () => this.showDailyView());
+        this.app.router.register('nutrition-weekly', () => this.showWeeklyView());
+        this.app.router.register('nutrition-monthly', () => this.showMonthlyView());
+    }
+
+    loadData() {
+        const today = this.getTodayKey();
+        this.dailyIntake = this.app.storage.get('daily_intake_' + today, {
+            meals: [
+                { id: 'desayuno', name: 'Desayuno', foods: [], macros: { calories: 0, protein: 0, carbs: 0, fat: 0 } },
+                { id: 'almuerzo', name: 'Almuerzo', foods: [], macros: { calories: 0, protein: 0, carbs: 0, fat: 0 } },
+                { id: 'comida', name: 'Comida', foods: [], macros: { calories: 0, protein: 0, carbs: 0, fat: 0 } },
+                { id: 'cena', name: 'Cena', foods: [], macros: { calories: 0, protein: 0, carbs: 0, fat: 0 } }
+            ],
+            totalMacros: { calories: 0, protein: 0, carbs: 0, fat: 0 }
+        });
+        this.meals = this.dailyIntake.meals;
+    }
+
+    getTodayKey() {
+        return new Date().toISOString().split('T')[0];
+    }
+
+    showDailyView() {
+        const container = document.getElementById('main-content');
+        if (!this.isEnabled()) {
+            this.renderDisabled(container);
+            return;
+        }
+
+        const colors = this.app.theme.getColors();
+        const targets = this.app.user.getNutritionTargets();
+        const current = this.dailyIntake.totalMacros;
+
+        container.innerHTML = `
+            <div style="animation: fadeIn 0.6s ease-out;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px;">
+                    <div>
+                        <h2 style="color: ${colors.text}; font-size: 2.2em; margin: 0 0 8px 0; font-weight: 700; font-family: 'Poppins', sans-serif;">🍽️ Nutrición Diaria</h2>
+                        <p style="color: ${colors.textSecondary}; font-size: 1.1em; margin: 0;">${new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    </div>
+                    <button onclick="app.navigate('inicio')" class="btn-secondary">← Volver</button>
+                </div>
+
+                ${this.generateMacroSummaryHTML(targets, current, colors)}
+                ${this.generateMealsHTML(colors)}
+                
+                <div style="text-align: center; margin-top: 32px;">
+                    <button onclick="app.nutritionModule.addMeal()" class="btn-secondary" style="margin-right: 12px;">+ Añadir Comida</button>
+                    <button onclick="app.nutritionModule.saveDay()" class="btn-primary">💾 Guardar Día</button>
+                </div>
+            </div>
+        `;
+
+        this.setupFoodInputs();
+    }
+
+    generateMacroSummaryHTML(targets, current, colors) {
+        return `
+            <div class="macro-card" style="margin-bottom: 32px;">
+                <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-family: 'Poppins', sans-serif; font-size: 1.5em; font-weight: 700; text-align: center;">📊 Objetivos vs Consumo</h3>
+                <div class="grid-4">
+                    ${this.generateMacroCardHTML('Calorías', 'KCAL', targets.calories, current.calories, colors)}
+                    ${this.generateMacroCardHTML('Proteína', 'G', targets.protein, current.protein, colors)}
+                    ${this.generateMacroCardHTML('Carbohidratos', 'G', targets.carbs, current.carbs, colors)}
+                    ${this.generateMacroCardHTML('Grasa', 'G', targets.fat, current.fat, colors)}
+                </div>
+            </div>
+        `;
+    }
+
+    generateMacroCardHTML(name, unit, target, current, colors) {
+        const percentage = target > 0 ? (current / target) * 100 : 0;
+        let statusColor = colors.textSecondary;
+        let borderColor = colors.border;
+        
+        if (percentage >= 90 && percentage <= 110) {
+            statusColor = '#10b981'; // Verde - Objetivo cumplido
+            borderColor = '#10b981';
+        } else if (percentage < 80 || percentage > 120) {
+            statusColor = '#ef4444'; // Rojo - Muy fuera del objetivo
+            borderColor = '#ef4444';
+        } else {
+            statusColor = '#f59e0b'; // Amarillo - Cerca del objetivo
+            borderColor = '#f59e0b';
+        }
+
+        return `
+            <div style="background: ${colors.primary}; border: 3px solid ${borderColor}; border-radius: 16px; padding: 20px; text-align: center; transition: all 0.3s ease;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="font-size: 2em; font-weight: 800; color: ${statusColor}; font-family: 'Poppins', sans-serif;">${Math.round(current)}</div>
+                    <div style="text-align: right;">
+                        <div style="color: ${colors.textSecondary}; font-size: 0.8em; font-weight: 600;">META</div>
+                        <div style="color: ${colors.text}; font-size: 1.2em; font-weight: 700;">${target}</div>
+                    </div>
+                </div>
+                <div style="color: ${colors.textSecondary}; font-size: 0.9em; font-weight: 600; margin-bottom: 12px; text-transform: uppercase;">${name} (${unit})</div>
+                <div style="background: ${colors.background}; border-radius: 10px; height: 8px; overflow: hidden;">
+                    <div style="background: ${statusColor}; height: 100%; width: ${Math.min(percentage, 100)}%; transition: width 0.5s ease; border-radius: 10px;"></div>
+                </div>
+                <div style="color: ${statusColor}; font-size: 0.75em; font-weight: 700; margin-top: 8px;">${Math.round(percentage)}%</div>
+            </div>
+        `;
+    }
+
+    generateMealsHTML(colors) {
+        return this.meals.map(meal => `
+            <div class="meal-card" id="meal-${meal.id}">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                    <h4 style="color: ${colors.textDark}; margin: 0; font-size: 1.4em; font-weight: 700; font-family: 'Poppins', sans-serif;">${meal.name}</h4>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="app.nutritionModule.addFoodToMeal('${meal.id}')" class="btn-secondary" style="padding: 8px 16px; font-size: 0.9em;">+ Alimento</button>
+                        ${meal.id !== 'desayuno' ? `<button onclick="app.nutritionModule.deleteMeal('${meal.id}')" class="btn-danger" style="padding: 8px 16px; font-size: 0.9em;">🗑️</button>` : ''}
+                    </div>
+                </div>
+                
+                <div id="foods-${meal.id}" style="margin-bottom: 20px;">
+                    ${meal.foods.map((food, index) => `
+                        <div class="food-item" style="background: ${colors.primary}; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 2px solid ${colors.border};">
+                            <div class="grid-3" style="margin-bottom: 16px; gap: 16px;">
+                                <div class="autocomplete-container">
+                                    <input type="text" value="${food.name || ''}" placeholder="Buscar alimento..." class="input-modern food-name" data-meal="${meal.id}" data-index="${index}" style="width: 100%;">
+                                    <div class="autocomplete-suggestions" style="display: none;"></div>
+                                </div>
+                                <input type="number" value="${food.quantity || ''}" placeholder="Cantidad (g)" class="input-modern food-quantity" data-meal="${meal.id}" data-index="${index}" style="width: 100%; text-align: center;">
+                                <button onclick="app.nutritionModule.removeFoodFromMeal('${meal.id}', ${index})" class="btn-danger" style="width: 100%; padding: 12px;">Eliminar</button>
+                            </div>
+                            <div class="grid-4" style="font-size: 0.9em; text-align: center; background: ${colors.secondary}; padding: 12px; border-radius: 8px;">
+                                <div>
+                                    <div style="font-weight: 700; color: ${colors.textDark}; font-size: 1.1em;">${Math.round(food.calories || 0)}</div>
+                                    <div style="font-size: 0.8em; color: ${colors.textDark}; opacity: 0.7;">KCAL</div>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 700; color: ${colors.textDark}; font-size: 1.1em;">${Math.round(food.protein || 0)}</div>
+                                    <div style="font-size: 0.8em; color: ${colors.textDark}; opacity: 0.7;">PROT</div>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 700; color: ${colors.textDark}; font-size: 1.1em;">${Math.round(food.carbs || 0)}</div>
+                                    <div style="font-size: 0.8em; color: ${colors.textDark}; opacity: 0.7;">CARB</div>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 700; color: ${colors.textDark}; font-size: 1.1em;">${Math.round(food.fat || 0)}</div>
+                                    <div style="font-size: 0.8em; color: ${colors.textDark}; opacity: 0.7;">GRASA</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${meal.foods.length === 0 ? `<p style="color: ${colors.textSecondary}; text-align: center; font-style: italic; margin: 20px 0;">No hay alimentos agregados</p>` : ''}
+                </div>
+                
+                <div class="grid-4" style="background: linear-gradient(135deg, ${colors.secondary} 0%, ${colors.accent}20 100%); border-radius: 12px; padding: 16px; font-size: 1em; text-align: center; border: 2px solid ${colors.accent}40;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 1.3em; color: ${colors.textDark};">${Math.round(meal.macros.calories)}</div>
+                        <div style="font-size: 0.8em; opacity: 0.8; color: ${colors.textDark}; font-weight: 600;">KCAL TOTAL</div>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 1.3em; color: ${colors.textDark};">${Math.round(meal.macros.protein)}</div>
+                        <div style="font-size: 0.8em; opacity: 0.8; color: ${colors.textDark}; font-weight: 600;">PROT TOTAL</div>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 1.3em; color: ${colors.textDark};">${Math.round(meal.macros.carbs)}</div>
+                        <div style="font-size: 0.8em; opacity: 0.8; color: ${colors.textDark}; font-weight: 600;">CARB TOTAL</div>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 1.3em; color: ${colors.textDark};">${Math.round(meal.macros.fat)}</div>
+                        <div style="font-size: 0.8em; opacity: 0.8; color: ${colors.textDark}; font-weight: 600;">GRASA TOTAL</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    setupFoodInputs() {
+        // Configurar autocompletado para nombres de alimentos
+        document.querySelectorAll('.food-name').forEach(input => {
+            input.addEventListener('input', (e) => this.handleFoodNameChange(e));
+        });
+
+        // Configurar cambios de cantidad
+        document.querySelectorAll('.food-quantity').forEach(input => {
+            input.addEventListener('input', (e) => this.handleQuantityChange(e));
+        });
+    }
+
+    async handleFoodNameChange(event) {
+        const input = event.target;
+        const query = input.value.trim();
+        
+        if (query.length >= 2) {
+            const suggestions = await this.app.nutritionAPI.searchFood(query);
+            this.showSuggestions(input, suggestions);
+        } else {
+            this.hideSuggestions(input);
+        }
+    }
+
+    showSuggestions(input, suggestions) {
+        const container = input.parentElement.querySelector('.autocomplete-suggestions');
+        
+        if (suggestions.length > 0) {
+            container.innerHTML = suggestions.map(food => `
+                <div class="autocomplete-suggestion" onclick="app.nutritionModule.selectFood(this, '${input.dataset.meal}', ${input.dataset.index})" data-food='${JSON.stringify(food)}'>
+                    <div style="font-weight: 600; color: var(--text-dark);">${food.name}</div>
+                    <div style="font-size: 0.85em; opacity: 0.7; color: var(--text-secondary);">${food.calories} kcal • ${food.protein}g prot • ${food.carbs}g carb • ${food.fat}g grasa</div>
+                </div>
+            `).join('');
+            container.style.display = 'block';
+        } else {
+            this.hideSuggestions(input);
+        }
+    }
+
+    hideSuggestions(input) {
+        const container = input.parentElement.querySelector('.autocomplete-suggestions');
+        if (container) container.style.display = 'none';
+    }
+
+    selectFood(element, mealId, foodIndex) {
+        const foodData = JSON.parse(element.dataset.food);
+        const meal = this.meals.find(m => m.id === mealId);
+        
+        if (meal && meal.foods[foodIndex]) {
+            // Actualizar datos del alimento
+            meal.foods[foodIndex] = {
+                ...meal.foods[foodIndex],
+                name: foodData.name,
+                baseCalories: foodData.calories,
+                baseProtein: foodData.protein,
+                baseCarbs: foodData.carbs,
+                baseFat: foodData.fat
+            };
+            
+            // Recalcular con la cantidad actual
+            const quantity = meal.foods[foodIndex].quantity || 100;
+            this.updateFoodMacros(meal.foods[foodIndex], quantity);
+            
+            this.updateMealMacros(mealId);
+            this.updateTotalMacros();
+            this.refreshMacroDisplay();
+        }
+        
+        // Actualizar input y ocultar sugerencias
+        const input = element.parentElement.parentElement.querySelector('.food-name');
+        input.value = foodData.name;
+        this.hideSuggestions(input);
+    }
+
+    handleQuantityChange(event) {
+        const input = event.target;
+        const mealId = input.dataset.meal;
+        const foodIndex = parseInt(input.dataset.index);
+        const quantity = parseFloat(input.value) || 0;
+        
+        const meal = this.meals.find(m => m.id === mealId);
+        if (meal && meal.foods[foodIndex]) {
+            meal.foods[foodIndex].quantity = quantity;
+            this.updateFoodMacros(meal.foods[foodIndex], quantity);
+            
+            this.updateMealMacros(mealId);
+            this.updateTotalMacros();
+            this.refreshMacroDisplay();
+        }
+    }
+
+    updateFoodMacros(food, quantity) {
+        const multiplier = quantity / 100; // Por cada 100g
+        food.calories = (food.baseCalories || 0) * multiplier;
+        food.protein = (food.baseProtein || 0) * multiplier;
+        food.carbs = (food.baseCarbs || 0) * multiplier;
+        food.fat = (food.baseFat || 0) * multiplier;
+    }
+
+    addFoodToMeal(mealId) {
+        const meal = this.meals.find(m => m.id === mealId);
+        if (meal) {
+            meal.foods.push({
+                name: '',
+                quantity: 100,
+                calories: 0,
+                protein: 0,
+                carbs: 0,
+                fat: 0,
+                baseCalories: 0,
+                baseProtein: 0,
+                baseCarbs: 0,
+                baseFat: 0
+            });
+            this.showDailyView();
+        }
+    }
+
+    removeFoodFromMeal(mealId, foodIndex) {
+        const meal = this.meals.find(m => m.id === mealId);
+        if (meal) {
+            meal.foods.splice(foodIndex, 1);
+            this.updateMealMacros(mealId);
+            this.updateTotalMacros();
+            this.showDailyView();
+            this.app.notifications.show('Alimento eliminado', 'info', 2000);
+        }
+    }
+
+    addMeal() {
+        const newMealId = 'meal_' + Date.now();
+        const newMeal = {
+            id: newMealId,
+            name: 'Nueva comida',
+            foods: [],
+            macros: { calories: 0, protein: 0, carbs: 0, fat: 0 }
+        };
+        
+        this.meals.push(newMeal);
+        this.showDailyView();
+        this.app.notifications.show('Nueva comida agregada', 'success', 2000);
+    }
+
+    deleteMeal(mealId) {
+        this.meals = this.meals.filter(m => m.id !== mealId);
+        this.updateTotalMacros();
+        this.showDailyView();
+        this.app.notifications.show('Comida eliminada', 'info');
+    }
+
+    updateMealMacros(mealId) {
+        const meal = this.meals.find(m => m.id === mealId);
+        if (meal) {
+            meal.macros = {
+                calories: meal.foods.reduce((sum, food) => sum + (food.calories || 0), 0),
+                protein: meal.foods.reduce((sum, food) => sum + (food.protein || 0), 0),
+                carbs: meal.foods.reduce((sum, food) => sum + (food.carbs || 0), 0),
+                fat: meal.foods.reduce((sum, food) => sum + (food.fat || 0), 0)
+            };
+        }
+    }
+
+    updateTotalMacros() {
+        this.dailyIntake.totalMacros = {
+            calories: this.meals.reduce((sum, meal) => sum + (meal.macros.calories || 0), 0),
+            protein: this.meals.reduce((sum, meal) => sum + (meal.macros.protein || 0), 0),
+            carbs: this.meals.reduce((sum, meal) => sum + (meal.macros.carbs || 0), 0),
+            fat: this.meals.reduce((sum, meal) => sum + (meal.macros.fat || 0), 0)
+        };
+    }
+
+    refreshMacroDisplay() {
+        setTimeout(() => {
+            // Re-renderizar solo la sección de macros
+            this.showDailyView();
+        }, 100);
+    }
+
+    saveDay() {
+        this.dailyIntake.meals = this.meals;
+        this.app.storage.set('daily_intake_' + this.getTodayKey(), this.dailyIntake);
+        this.app.notifications.show('Día guardado exitosamente 💾', 'success');
+    }
+
+    showWeeklyView() {
+        const container = document.getElementById('main-content');
+        const colors = this.app.theme.getColors();
+
+        container.innerHTML = `
+            <div style="animation: fadeIn 0.6s ease-out;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px;">
+                    <div>
+                        <h2 style="color: ${colors.text}; font-size: 2.2em; margin: 0 0 8px 0; font-weight: 700; font-family: 'Poppins', sans-serif;">📊 Vista Semanal</h2>
+                        <p style="color: ${colors.textSecondary}; font-size: 1.1em; margin: 0;">Seguimiento de macronutrientes semanal</p>
+                    </div>
+                    <button onclick="app.navigate('inicio')" class="btn-secondary">← Volver</button>
+                </div>
+                
+                <div class="macro-card">
+                    <h3 style="color: ${colors.textDark}; text-align: center; font-family: 'Poppins', sans-serif; font-size: 1.8em; margin-bottom: 40px; font-weight: 700;">🚧 Próximamente</h3>
+                    <p style="color: ${colors.textSecondary}; text-align: center; font-size: 1.2em; margin-bottom: 32px;">Vista semanal con gráficos de tendencias y estadísticas detalladas</p>
+                    <div style="text-align: center;">
+                        <button onclick="app.navigate('nutrition-daily')" class="btn-primary">Ver Vista Diaria</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    showMonthlyView() {
+        const container = document.getElementById('main-content');
+        const colors = this.app.theme.getColors();
+
+        container.innerHTML = `
+            <div style="animation: fadeIn 0.6s ease-out;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px;">
+                    <div>
+                        <h2 style="color: ${colors.text}; font-size: 2.2em; margin: 0 0 8px 0; font-weight: 700; font-family: 'Poppins', sans-serif;">📆 Vista Mensual</h2>
+                        <p style="color: ${colors.textSecondary}; font-size: 1.1em; margin: 0;">Análisis nutricional mensual</p>
+                    </div>
+                    <button onclick="app.navigate('inicio')" class="btn-secondary">← Volver</button>
+                </div>
+                
+                <div class="macro-card">
+                    <h3 style="color: ${colors.textDark}; text-align: center; font-family: 'Poppins', sans-serif; font-size: 1.8em; margin-bottom: 40px; font-weight: 700;">🚧 Próximamente</h3>
+                    <p style="color: ${colors.textSecondary}; text-align: center; font-size: 1.2em; margin-bottom: 32px;">Vista mensual con patrones alimentarios y recomendaciones personalizadas</p>
+                    <div style="text-align: center;">
+                        <button onclick="app.navigate('nutrition-daily')" class="btn-primary">Ver Vista Diaria</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderDisabled(container) {
+        const colors = this.app.theme.getColors();
+        container.innerHTML = `
+            <div style="text-align: center; padding: 80px 20px;">
+                <div class="macro-card">
+                    <h2 style="color: ${colors.textSecondary}; font-family: 'Poppins', sans-serif; font-size: 2.5em; margin-bottom: 20px;">🍽️ MÓDULO NUTRICIÓN DESHABILITADO</h2>
+                    <p style="color: ${colors.textSecondary}; font-size: 1.2em; margin-bottom: 32px;">Habilita este módulo desde configuración</p>
+                    <button onclick="app.navigate('configuracion')" class="btn-primary">IR A CONFIGURACIÓN</button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// ===== MÓDULO DE ENTRENAMIENTO RENOVADO =====
+class WorkoutModule extends BaseModule {
+    constructor(app) {
+        super('workout', app);
+        this.weeklyPlan = {};
+        this.exerciseHistory = {};
+        this.vetoedExercises = [];
+        
+        this.sessionTypes = {
+            'entrenamiento': { name: 'Entrenamiento', icon: '💪', color: '#3b82f6' },
+            'descanso_activo': { name: 'Descanso Activo', icon: '🚶', color: '#10b981' },
+            'futbol': { name: 'Fútbol', icon: '⚽', color: '#ef4444' },
+            'piscina': { name: 'Piscina', icon: '🏊', color: '#06b6d4' },
+            'bicicleta': { name: 'Bicicleta', icon: '🚴', color: '#f59e0b' },
+            'caminata': { name: 'Caminata', icon: '🥾', color: '#84cc16' }
+        };
+        
+        this.exerciseDatabase = {
+            fuerza_superior: [
+                {
+                    id: 'fs1',
+                    name: 'Press de banca con barra',
+                    description: 'Ejercicio fundamental para el desarrollo del pectoral mayor. Técnica: espalda arqueada, pies firmes en el suelo, bajada controlada hasta el pecho.',
+                    target: 'Pecho',
+                    equipment: 'Barra + banco',
+                    type: 'weight',
+                    defaultSets: 4,
+                    alternatives: ['fs2', 'fs3']
+                },
+                {
+                    id: 'fs2',
+                    name: 'Press inclinado con mancuernas',
+                    description: 'Desarrollo del pectoral superior y mayor activación de estabilizadores. Banco a 30-45 grados, movimiento controlado.',
+                    target: 'Pecho superior',
+                    equipment: 'Mancuernas + banco',
+                    type: 'weight',
+                    defaultSets: 3,
+                    alternatives: ['fs1', 'fs4']
+                },
+                {
+                    id: 'fs3',
+                    name: 'Dominadas con agarre supino',
+                    description: 'Ejercicio para dorsales y bíceps. Ideal para ganar fuerza funcional. Colgarse completamente y subir hasta barbilla por encima de la barra.',
+                    target: 'Dorsales/Bíceps',
+                    equipment: 'Barra de dominadas',
+                    type: 'weight',
+                    defaultSets: 4,
+                    alternatives: ['fs4', 'fs5']
+                }
+            ],
+            fuerza_inferior: [
+                {
+                    id: 'fi1',
+                    name: 'Sentadilla trasera con barra',
+                    description: 'Rey de los ejercicios de pierna. Desarrollo completo del tren inferior. Espalda recta, rodillas en línea con los pies, bajar hasta 90 grados.',
+                    target: 'Cuádriceps/Glúteos',
+                    equipment: 'Barra + rack',
+                    type: 'weight',
+                    defaultSets: 4,
+                    alternatives: ['fi2', 'fi3']
+                },
+                {
+                    id: 'fi2',
+                    name: 'Peso muerto rumano',
+                    description: 'Fortalecimiento de la cadena posterior. Fundamental para proteger la espalda. Cadera hacia atrás, rodillas ligeramente flexionadas.',
+                    target: 'Isquios/Glúteos',
+                    equipment: 'Barra',
+                    type: 'weight',
+                    defaultSets: 4,
+                    alternatives: ['fi1', 'fi4']
+                },
+                {
+                    id: 'fi3',
+                    name: 'Zancadas alternas',
+                    description: 'Ejercicio unilateral que mejora equilibrio y fuerza. Paso amplio hacia adelante, rodilla trasera casi toca el suelo.',
+                    target: 'Cuádriceps/Glúteos',
+                    equipment: 'Mancuernas',
+                    type: 'weight',
+                    defaultSets: 3,
+                    alternatives: ['fi1', 'fi2']
+                }
+            ]
+        };
+    }
+
+    async onInit() {
+        this.loadData();
+        this.generateWeeklyPlan();
+    }
+
+    registerRoutes() {
+        this.app.router.register('workout-daily', () => this.showDailyView());
+        this.app.router.register('workout-weekly', () => this.showWeeklyView());
+        this.app.router.register('workout-monthly', () => this.showMonthlyView());
+    }
+
+    loadData() {
+        this.exerciseHistory = this.app.storage.get('exercise_history', {});
+        this.vetoedExercises = this.app.storage.get('vetoed_exercises', []);
+        this.weeklyPlan = this.app.storage.get('weekly_plan', {});
+        
+        if (Object.keys(this.weeklyPlan).length === 0) {
+            this.generateWeeklyPlan();
+        }
+    }
+
+    generateWeeklyPlan() {
+        const today = new Date();
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay() + 1); // Lunes
+
+        this.weeklyPlan = {};
+        const sessionPattern = ['entrenamiento', 'descanso_activo', 'entrenamiento', 'futbol', 'entrenamiento', 'piscina', 'caminata'];
+
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(weekStart);
+            date.setDate(weekStart.getDate() + i);
+            const dateKey = date.toISOString().split('T')[0];
+            
+            this.weeklyPlan[dateKey] = {
+                date: dateKey,
+                dayName: date.toLocaleDateString('es-ES', { weekday: 'long' }),
+                sessionType: sessionPattern[i],
+                completed: false,
+                exercises: this.generateDayExercises(sessionPattern[i], i)
+            };
+        }
+
+        this.app.storage.set('weekly_plan', this.weeklyPlan);
+    }
+
+    generateDayExercises(sessionType, dayIndex) {
+        if (sessionType === 'entrenamiento') {
+            // Alternar entre superior e inferior
+            const isUpperDay = dayIndex === 0 || dayIndex === 4; // Lunes y Viernes
+            
+            if (isUpperDay) {
+                return this.exerciseDatabase.fuerza_superior
+                    .filter(ex => !this.vetoedExercises.includes(ex.id))
+                    .slice(0, 3)
+                    .map(ex => ({ ...ex, sets: this.generateEmptySets(ex.defaultSets, ex.type) }));
+            } else {
+                return this.exerciseDatabase.fuerza_inferior
+                    .filter(ex => !this.vetoedExercises.includes(ex.id))
+                    .slice(0, 3)
+                    .map(ex => ({ ...ex, sets: this.generateEmptySets(ex.defaultSets, ex.type) }));
+            }
+        } else if (sessionType === 'descanso_activo') {
+            return [{
+                id: 'da1',
+                name: 'Movilidad y estiramientos',
+                description: 'Rutina de movilidad para mejorar flexibilidad y recuperación activa.',
+                type: 'time',
+                sets: [{ duration: 30 }]
+            }];
+        } else {
+            return [{
+                id: sessionType,
+                name: this.sessionTypes[sessionType].name,
+                description: `Sesión de ${this.sessionTypes[sessionType].name.toLowerCase()}`,
+                type: 'cardio',
+                sets: [{ duration: '', distance: '' }]
+            }];
+        }
+    }
+
+    generateEmptySets(count, type = 'weight') {
+        const sets = [];
+        for (let i = 0; i < count; i++) {
+            if (type === 'time') {
+                sets.push({ reps: '', duration: '' });
+            } else if (type === 'cardio') {
+                sets.push({ duration: '', distance: '' });
+            } else {
+                sets.push({ reps: '', weight: '' });
+            }
+        }
+        return sets;
+    }
+
+    showDailyView() {
+        const container = document.getElementById('main-content');
+        if (!this.isEnabled()) {
+            this.renderDisabled(container);
+            return;
+        }
+
+        const colors = this.app.theme.getColors();
+        const today = new Date().toISOString().split('T')[0];
+        const todayPlan = this.weeklyPlan[today];
+
+        if (!todayPlan) {
+            this.generateWeeklyPlan();
+            return this.showDailyView();
+        }
+
+        container.innerHTML = `
+            <div style="animation: fadeIn 0.6s ease-out;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px;">
+                    <div>
+                        <h2 style="color: ${colors.text}; font-size: 2.2em; margin: 0 0 8px 0; font-weight: 700; font-family: 'Poppins', sans-serif;">💪 Plan de Hoy</h2>
+                        <p style="color: ${colors.textSecondary}; font-size: 1.1em; margin: 0; text-transform: capitalize;">${todayPlan.dayName}, ${new Date().getDate()} de ${new Date().toLocaleDateString('es-ES', { month: 'long' })}</p>
+                    </div>
+                    <button onclick="app.navigate('inicio')" class="btn-secondary">← Volver</button>
+                </div>
+
+                ${this.generateSessionHeaderHTML(todayPlan, colors)}
+                ${this.generateExercisesHTML(todayPlan, colors)}
+                
+                <div style="text-align: center; margin-top: 32px;">
+                    <button onclick="app.workoutModule.saveWorkout()" class="btn-secondary" style="margin-right: 16px;">💾 Guardar Sesión</button>
+                    <button onclick="app.workoutModule.completeWorkout('${today}')" class="btn-success" style="padding: 14px 28px;">✅ Completar Sesión</button>
+                </div>
+            </div>
+        `;
+
+        this.setupWorkoutInputs();
+    }
+
+    generateSessionHeaderHTML(todayPlan, colors) {
+        const session = this.sessionTypes[todayPlan.sessionType];
+        
+        return `
+            <div class="macro-card" style="text-align: center; margin-bottom: 32px; background: linear-gradient(135deg, ${session.color}20 0%, ${session.color}08 100%); border: 3px solid ${session.color};">
+                <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                    <div style="background: ${session.color}; color: white; width: 72px; height: 72px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 2.2em; margin-right: 24px; box-shadow: 0 8px 24px ${session.color}40;">${session.icon}</div>
+                    <div style="text-align: left;">
+                        <h3 style="color: ${colors.textDark}; margin: 0 0 12px 0; font-size: 2em; font-weight: 700; font-family: 'Poppins', sans-serif;">${session.name}</h3>
+                        <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                            <span style="background: ${todayPlan.completed ? '#10b981' : '#f59e0b'}; color: white; padding: 6px 16px; border-radius: 16px; font-size: 0.9em; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                ${todayPlan.completed ? '✅ COMPLETADO' : '⏳ PENDIENTE'}
+                            </span>
+                            <span style="background: ${session.color}; color: white; padding: 6px 16px; border-radius: 16px; font-size: 0.9em; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                ${todayPlan.exercises.length} EJERCICIOS
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    generateExercisesHTML(todayPlan, colors) {
+        return todayPlan.exercises.map((exercise, exerciseIndex) => `
+            <div class="exercise-card" id="exercise-${exerciseIndex}" style="border-left-color: ${exercise.completed ? '#10b981' : colors.accent};">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px;">
+                    <div style="flex: 1;">
+                        <h4 style="color: ${colors.textDark}; margin: 0 0 12px 0; font-size: 1.5em; font-weight: 700; font-family: 'Poppins', sans-serif;">${exercise.name}</h4>
+                        <p style="color: ${colors.textSecondary}; margin: 0 0 16px 0; font-size: 1em; line-height: 1.6;">${exercise.description}</p>
+                        ${exercise.target ? `
+                            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                                <span style="background: ${colors.secondary}; color: ${colors.textDark}; padding: 6px 12px; border-radius: 16px; font-size: 0.85em; font-weight: 600;">🎯 ${exercise.target}</span>
+                                ${exercise.equipment ? `<span style="background: ${colors.accent}30; color: ${colors.textDark}; padding: 6px 12px; border-radius: 16px; font-size: 0.85em; font-weight: 600;">🏋️ ${exercise.equipment}</span>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-left: 20px; flex-wrap: wrap;">
+                        <button onclick="app.workoutModule.substituteExercise(${exerciseIndex})" class="btn-warning" style="padding: 8px 12px; font-size: 0.85em;">🔄 Cambiar</button>
+                        <button onclick="app.workoutModule.vetoExercise('${exercise.id}', ${exerciseIndex})" class="btn-danger" style="padding: 8px 12px; font-size: 0.85em;">❌ Vetar</button>
+                        <button onclick="app.workoutModule.completeExercise(${exerciseIndex})" class="btn-success" style="padding: 8px 12px; font-size: 0.85em;">✅ Hecho</button>
+                    </div>
+                </div>
+                
+                <div id="sets-${exerciseIndex}" style="margin-bottom: 24px;">
+                    ${exercise.sets.map((set, setIndex) => `
+                        <div class="set-row" style="display: grid; grid-template-columns: 50px 1fr 1fr 50px; gap: 16px; align-items: center; padding: 16px; margin-bottom: 12px; background: ${colors.primary}; border-radius: 12px; border: 2px solid ${colors.border};">
+                            <div style="font-weight: 800; color: white; text-align: center; background: ${colors.accent}; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1em; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">${setIndex + 1}</div>
+                            
+                            ${exercise.type === 'cardio' ? `
+                                <div>
+                                    <input type="number" placeholder="Minutos" value="${set.duration || ''}" class="input-modern set-duration" data-exercise="${exerciseIndex}" data-set="${setIndex}" style="text-align: center; width: 100%;">
+                                    <div style="text-align: center; font-size: 0.8em; color: ${colors.textSecondary}; margin-top: 4px; font-weight: 600; text-transform: uppercase;">TIEMPO</div>
+                                </div>
+                                <div>
+                                    <input type="number" step="0.1" placeholder="Km" value="${set.distance || ''}" class="input-modern set-distance" data-exercise="${exerciseIndex}" data-set="${setIndex}" style="text-align: center; width: 100%;">
+                                    <div style="text-align: center; font-size: 0.8em; color: ${colors.textSecondary}; margin-top: 4px; font-weight: 600; text-transform: uppercase;">DISTANCIA</div>
+                                </div>
+                            ` : exercise.type === 'time' ? `
+                                <div>
+                                    <input type="number" placeholder="Reps" value="${set.reps || ''}" class="input-modern set-reps" data-exercise="${exerciseIndex}" data-set="${setIndex}" style="text-align: center; width: 100%;">
+                                    <div style="text-align: center; font-size: 0.8em; color: ${colors.textSecondary}; margin-top: 4px; font-weight: 600; text-transform: uppercase;">REPS</div>
+                                </div>
+                                <div>
+                                    <input type="number" placeholder="Segundos" value="${set.duration || ''}" class="input-modern set-duration" data-exercise="${exerciseIndex}" data-set="${setIndex}" style="text-align: center; width: 100%;">
+                                    <div style="text-align: center; font-size: 0.8em; color: ${colors.textSecondary}; margin-top: 4px; font-weight: 600; text-transform: uppercase;">TIEMPO</div>
+                                </div>
+                            ` : `
+                                <div>
+                                    <input type="number" placeholder="Reps" value="${set.reps || ''}" class="input-modern set-reps" data-exercise="${exerciseIndex}" data-set="${setIndex}" style="text-align: center; width: 100%;">
+                                    <div style="text-align: center; font-size: 0.8em; color: ${colors.textSecondary}; margin-top: 4px; font-weight: 600; text-transform: uppercase;">REPS</div>
+                                </div>
+                                <div>
+                                    <input type="number" step="0.5" placeholder="Kg" value="${set.weight || ''}" class="input-modern set-weight" data-exercise="${exerciseIndex}" data-set="${setIndex}" style="text-align: center; width: 100%;">
+                                    <div style="text-align: center; font-size: 0.8em; color: ${colors.textSecondary}; margin-top: 4px; font-weight: 600; text-transform: uppercase;">PESO</div>
+                                </div>
+                            `}
+                            
+                            <button onclick="app.workoutModule.removeSet(${exerciseIndex}, ${setIndex})" class="btn-danger" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0;">✕</button>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div style="display: flex; gap: 16px;">
+                    <button onclick="app.workoutModule.addSet(${exerciseIndex})" class="btn-secondary" style="padding: 12px 24px;">+ Añadir Serie</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    setupWorkoutInputs() {
+        // Configurar eventos para inputs de series
+        document.querySelectorAll('.set-reps, .set-weight, .set-duration, .set-distance').forEach(input => {
+            input.addEventListener('input', (e) => this.handleSetChange(e));
+        });
+    }
+
+    handleSetChange(event) {
+        const input = event.target;
+        const exerciseIndex = parseInt(input.dataset.exercise);
+        const setIndex = parseInt(input.dataset.set);
+        const value = input.value;
+        
+        const today = new Date().toISOString().split('T')[0];
+        const todayPlan = this.weeklyPlan[today];
+        
+        if (todayPlan && todayPlan.exercises[exerciseIndex] && todayPlan.exercises[exerciseIndex].sets[setIndex]) {
+            if (input.classList.contains('set-reps')) {
+                todayPlan.exercises[exerciseIndex].sets[setIndex].reps = value;
+            } else if (input.classList.contains('set-weight')) {
+                todayPlan.exercises[exerciseIndex].sets[setIndex].weight = value;
+                // Guardar en historial de pesos
+                this.saveWeightHistory(todayPlan.exercises[exerciseIndex].id, value);
+            } else if (input.classList.contains('set-duration')) {
+                todayPlan.exercises[exerciseIndex].sets[setIndex].duration = value;
+            } else if (input.classList.contains('set-distance')) {
+                todayPlan.exercises[exerciseIndex].sets[setIndex].distance = value;
+            }
+            
+            // Guardar cambios inmediatamente
+            this.saveWorkout();
+        }
+    }
+
+    saveWeightHistory(exerciseId, weight) {
+        if (!this.exerciseHistory[exerciseId]) {
+            this.exerciseHistory[exerciseId] = [];
+        }
+        
+        const today = new Date().toISOString().split('T')[0];
+        const existingEntry = this.exerciseHistory[exerciseId].find(entry => entry.date === today);
+        
+        if (existingEntry) {
+            existingEntry.maxWeight = Math.max(existingEntry.maxWeight, parseFloat(weight) || 0);
+        } else {
+            this.exerciseHistory[exerciseId].push({
+                date: today,
+                maxWeight: parseFloat(weight) || 0,
+                timestamp: Date.now()
+            });
+        }
+        
+        // Mantener solo los últimos 30 registros
+        if (this.exerciseHistory[exerciseId].length > 30) {
+            this.exerciseHistory[exerciseId] = this.exerciseHistory[exerciseId].slice(-30);
+        }
+    }
+
+    addSet(exerciseIndex) {
+        const today = new Date().toISOString().split('T')[0];
+        const todayPlan = this.weeklyPlan[today];
+        const exercise = todayPlan.exercises[exerciseIndex];
+        
+        if (exercise.type === 'cardio') {
+            exercise.sets.push({ duration: '', distance: '' });
+        } else if (exercise.type === 'time') {
+            exercise.sets.push({ reps: '', duration: '' });
+        } else {
+            exercise.sets.push({ reps: '', weight: '' });
+        }
+        
+        this.showDailyView();
+        this.app.notifications.show('Serie añadida ➕', 'success', 2000);
+    }
+
+    removeSet(exerciseIndex, setIndex) {
+        const today = new Date().toISOString().split('T')[0];
+        const todayPlan = this.weeklyPlan[today];
+        const exercise = todayPlan.exercises[exerciseIndex];
+        
+        if (exercise.sets.length > 1) {
+            exercise.sets.splice(setIndex, 1);
+            this.showDailyView();
+            this.app.notifications.show('Serie eliminada ➖', 'info', 2000);
+        } else {
+            this.app.notifications.show('Debe mantener al menos una serie', 'warning', 2000);
+        }
+    }
+
+    substituteExercise(exerciseIndex) {
+        const today = new Date().toISOString().split('T')[0];
+        const todayPlan = this.weeklyPlan[today];
+        const currentExercise = todayPlan.exercises[exerciseIndex];
+        
+        // Encontrar alternativas
+        let alternatives = [];
+        for (const category of Object.values(this.exerciseDatabase)) {
+            const current = category.find(ex => ex.id === currentExercise.id);
+            if (current && current.alternatives) {
+                alternatives = current.alternatives.map(altId => {
+                    for (const cat of Object.values(this.exerciseDatabase)) {
+                        const found = cat.find(ex => ex.id === altId);
+                        if (found && !this.vetoedExercises.includes(found.id)) return found;
+                    }
+                    return null;
+                }).filter(Boolean);
+                break;
+            }
+        }
+        
+        if (alternatives.length > 0) {
+            const randomAlt = alternatives[Math.floor(Math.random() * alternatives.length)];
+            todayPlan.exercises[exerciseIndex] = {
+                ...randomAlt,
+                sets: this.generateEmptySets(randomAlt.defaultSets, randomAlt.type)
+            };
+            
+            this.showDailyView();
+            this.app.notifications.show(`Ejercicio cambiado por: ${randomAlt.name} 🔄`, 'info');
+        } else {
+            this.app.notifications.show('No hay alternativas disponibles', 'warning');
+        }
+    }
+
+    vetoExercise(exerciseId, exerciseIndex) {
+        if (!this.vetoedExercises.includes(exerciseId)) {
+            this.vetoedExercises.push(exerciseId);
+            this.app.storage.set('vetoed_exercises', this.vetoedExercises);
+            
+            this.app.notifications.show('Ejercicio vetado ❌', 'warning');
+            
+            // Sustituir inmediatamente
+            this.substituteExercise(exerciseIndex);
+        }
+    }
+
+    completeExercise(exerciseIndex) {
+        const exerciseCard = document.getElementById(`exercise-${exerciseIndex}`);
+        if (exerciseCard) {
+            const colors = this.app.theme.getColors();
+            exerciseCard.style.background = '#10b98115';
+            exerciseCard.style.borderLeftColor = '#10b981';
+            exerciseCard.style.transform = 'scale(0.98)';
+            
+            const today = new Date().toISOString().split('T')[0];
+            const todayPlan = this.weeklyPlan[today];
+            todayPlan.exercises[exerciseIndex].completed = true;
+            
+            this.app.notifications.show('¡Ejercicio completado! 💪🎉', 'success');
+        }
+    }
+
+    completeWorkout(dateKey) {
+        const plan = this.weeklyPlan[dateKey];
+        if (plan) {
+            plan.completed = true;
+            plan.completedAt = new Date().toISOString();
+            this.saveWorkout();
+            this.app.notifications.show('¡Sesión completada exitosamente! 🏆✨', 'success');
+            
+            // Actualizar visualización
+            setTimeout(() => this.showDailyView(), 1500);
+        }
+    }
+
+    saveWorkout() {
+        this.app.storage.set('weekly_plan', this.weeklyPlan);
+        this.app.storage.set('exercise_history', this.exerciseHistory);
+    }
+
+    showWeeklyView() {
+        const container = document.getElementById('main-content');
+        const colors = this.app.theme.getColors();
+
+        container.innerHTML = `
+            <div style="animation: fadeIn 0.6s ease-out;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px;">
+                    <div>
+                        <h2 style="color: ${colors.text}; font-size: 2.2em; margin: 0 0 8px 0; font-weight: 700; font-family: 'Poppins', sans-serif;">📊 Plan Semanal</h2>
+                        <p style="color: ${colors.textSecondary}; font-size: 1.1em; margin: 0;">Planificación inteligente de entrenamientos</p>
+                    </div>
+                    <button onclick="app.navigate('inicio')" class="btn-secondary">← Volver</button>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px;">
+                    ${Object.values(this.weeklyPlan).map(day => {
+                        const session = this.sessionTypes[day.sessionType];
+                        return `
+                            <div class="macro-card day-card" style="cursor: pointer; text-align: center; transition: all 0.3s ease; border: 3px solid ${day.completed ? '#10b981' : session.color}40; position: relative;" onclick="app.workoutModule.openDayDetail('${day.date}')" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 24px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'">
+                                ${day.completed ? '<div style="position: absolute; top: 12px; right: 12px; background: #10b981; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;">✓</div>' : ''}
+                                <div style="background: ${session.color}; color: white; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 2em; margin: 0 auto 16px; box-shadow: 0 4px 16px ${session.color}40;">${session.icon}</div>
+                                <h4 style="color: ${colors.textDark}; margin: 0 0 8px 0; font-size: 1.2em; font-weight: 700; text-transform: capitalize; font-family: 'Poppins', sans-serif;">${day.dayName}</h4>
+                                <p style="color: ${colors.textSecondary}; margin: 0 0 16px 0; font-size: 0.95em; font-weight: 500;">${session.name}</p>
+                                <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                                    <span style="background: ${day.completed ? '#10b981' : '#f59e0b'}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8em; font-weight: 700;">
+                                        ${day.completed ? '✅ HECHO' : '⏳ PENDIENTE'}
+                                    </span>
+                                    <span style="background: ${session.color}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8em; font-weight: 700;">
+                                        ${day.exercises.length} EJ.
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                
+                <div style="text-align: center; margin-top: 32px;">
+                    <button onclick="app.workoutModule.generateNewWeek()" class="btn-secondary" style="margin-right: 16px;">🔄 Regenerar Semana</button>
+                    <button onclick="app.navigate('workout-daily')" class="btn-primary">Ver Hoy</button>
+                </div>
+            </div>
+        `;
+    }
+
+    openDayDetail(dateKey) {
+        // Mostrar vista diaria específica para esa fecha
+        this.app.navigate('workout-daily');
+    }
+
+    generateNewWeek() {
+        this.generateWeeklyPlan();
+        this.app.notifications.show('Nueva semana generada 🗓️', 'success');
+        this.showWeeklyView();
+    }
+
+    showMonthlyView() {
+        const container = document.getElementById('main-content');
+        const colors = this.app.theme.getColors();
+
+        container.innerHTML = `
+            <div style="animation: fadeIn 0.6s ease-out;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px;">
+                    <div>
+                        <h2 style="color: ${colors.text}; font-size: 2.2em; margin: 0 0 8px 0; font-weight: 700; font-family: 'Poppins', sans-serif;">📆 Vista Mensual</h2>
+                        <p style="color: ${colors.textSecondary}; font-size: 1.1em; margin: 0;">Calendario de entrenamientos y progreso</p>
+                    </div>
+                    <button onclick="app.navigate('inicio')" class="btn-secondary">← Volver</button>
+                </div>
+                
+                <div class="macro-card">
+                    <h3 style="color: ${colors.textDark}; text-align: center; font-family: 'Poppins', sans-serif; font-size: 1.8em; margin-bottom: 40px; font-weight: 700;">🚧 Próximamente</h3>
+                    <p style="color: ${colors.textSecondary}; text-align: center; font-size: 1.2em; margin-bottom: 32px;">Vista mensual con calendario interactivo, estadísticas de progreso y análisis de entrenamientos</p>
+                    <div style="text-align: center;">
+                        <button onclick="app.navigate('workout-weekly')" class="btn-primary" style="margin-right: 12px;">Ver Plan Semanal</button>
+                        <button onclick="app.navigate('workout-daily')" class="btn-secondary">Ver Hoy</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderDisabled(container) {
+        const colors = this.app.theme.getColors();
+        container.innerHTML = `
+            <div style="text-align: center; padding: 80px 20px;">
+                <div class="macro-card">
+                    <h2 style="color: ${colors.textSecondary}; font-family: 'Poppins', sans-serif; font-size: 2.5em; margin-bottom: 20px;">💪 MÓDULO ENTRENAMIENTO DESHABILITADO</h2>
+                    <p style="color: ${colors.textSecondary}; font-size: 1.2em; margin-bottom: 32px;">Habilita este módulo desde configuración</p>
+                    <button onclick="app.navigate('configuracion')" class="btn-primary">IR A CONFIGURACIÓN</button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// ===== CLASES DE SOPORTE =====
+class BaseModule {
+    constructor(name, app) {
+        this.name = name;
+        this.app = app;
+        this.initialized = false;
+    }
+
+    async init() {
+        if (this.initialized) return;
+        console.log(`Inicializando módulo ${this.name}...`);
+        await this.onInit();
+        this.registerRoutes();
+        this.initialized = true;
+        console.log(`Módulo ${this.name} inicializado`);
+    }
+
+    async onInit() {}
+    registerRoutes() {}
+
+    isEnabled() {
+        return this.app.user.isModuleEnabled(this.name);
+    }
+}
+
 class ThemeManager {
     constructor() {
         this.themes = {
             dark: {
-                primary: '#141414',
-                secondary: '#738290',
-                accent: '#a1b5d8',
-                background: '#fffcf7',
-                success: '#e4f0d0',
-                text: '#fffcf7',
-                textDark: '#141414',
-                textSecondary: '#a1b5d8',
-                border: '#738290',
-                danger: '#ff6b6b',
-                warning: '#ff9800'
+                primary: '#0f172a',
+                secondary: '#475569',
+                accent: '#3b82f6',
+                background: '#1e293b',
+                text: '#f8fafc',
+                textDark: '#0f172a',
+                textSecondary: '#64748b',
+                border: '#475569'
             },
             light: {
-                primary: '#fffcf7',
-                secondary: '#a1b5d8',
-                accent: '#738290',
-                background: '#f8f9fa',
-                success: '#2d5016',
-                text: '#141414',
-                textDark: '#141414',
-                textSecondary: '#4a5568',
-                border: '#cbd5e0',
-                danger: '#e53e3e',
-                warning: '#b45309'
+                primary: '#ffffff',
+                secondary: '#e2e8f0',
+                accent: '#3b82f6',
+                background: '#f8fafc',
+                text: '#0f172a',
+                textDark: '#0f172a',
+                textSecondary: '#64748b',
+                border: '#e2e8f0'
             }
         };
         this.currentTheme = 'dark';
@@ -672,17 +1723,13 @@ class ThemeManager {
         const colors = this.getColors();
         document.body.style.backgroundColor = colors.primary;
         document.body.style.color = colors.text;
-        document.body.style.fontFamily = "'Montserrat', sans-serif";
-
-        document.body.className = this.currentTheme === 'light' ? 'light-theme' : '';
         window.dispatchEvent(new CustomEvent('theme-changed', { detail: colors }));
     }
 }
 
-// ===== SISTEMA DE ALMACENAMIENTO =====
 class StorageManager {
     constructor() {
-        this.prefix = 'sulo_';
+        this.prefix = 'sulo_v2_';
     }
 
     set(key, value) {
@@ -702,41 +1749,30 @@ class StorageManager {
             return defaultValue;
         }
     }
-
-    remove(key) {
-        localStorage.removeItem(this.prefix + key);
-    }
-
-    clear() {
-        Object.keys(localStorage)
-            .filter(key => key.startsWith(this.prefix))
-            .forEach(key => localStorage.removeItem(key));
-    }
 }
 
-// ===== SISTEMA DE NOTIFICACIONES =====
 class NotificationManager {
     constructor(themeManager) {
         this.themeManager = themeManager;
     }
 
     show(message, type = 'info', duration = 3500) {
-        const colors = this.themeManager.getColors();
-        const toastColors = {
-            success: colors.success,
-            warning: colors.warning,
-            error: colors.danger,
-            info: colors.accent
+        const colors = {
+            success: '#10b981',
+            warning: '#f59e0b',
+            error: '#ef4444',
+            info: '#3b82f6'
         };
 
         const toast = document.createElement('div');
-        toast.className = 'toast ' + type;
         toast.style.cssText = `
             position: fixed; top: 24px; right: 24px;
-            background: ${toastColors[type]}; color: ${colors.textDark};
-            padding: 20px 28px; border-radius: 12px;
-            font-weight: 700; z-index: 10000;
+            background: ${colors[type]}; color: white;
+            padding: 16px 24px; border-radius: 12px;
+            font-weight: 600; z-index: 10000;
             animation: slideInRight 0.4s ease-out;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            font-family: 'Inter', sans-serif;
         `;
         toast.textContent = message;
         document.body.appendChild(toast);
@@ -744,21 +1780,16 @@ class NotificationManager {
         setTimeout(() => {
             toast.style.animation = 'slideOutRight 0.4s ease-out';
             setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.remove();
-                }
+                if (toast.parentNode) toast.remove();
             }, 400);
         }, duration);
     }
 }
 
-// ===== SISTEMA DE RUTAS =====
 class RouterManager {
     constructor() {
         this.routes = new Map();
         this.currentRoute = '';
-        this.params = {};
-
         window.addEventListener('popstate', () => this.handleRouteChange());
         setTimeout(() => this.handleRouteChange(), 100);
     }
@@ -768,44 +1799,29 @@ class RouterManager {
     }
 
     navigate(path, params = {}) {
-        this.params = params;
         history.pushState(params, '', window.location.origin + window.location.pathname + '#' + path);
         this.handleRouteChange();
     }
 
     handleRouteChange() {
         const hash = window.location.hash.substring(1) || 'inicio';
-        const [route, ...routeParams] = hash.split('/');
-
-        this.currentRoute = route;
-
-        if (routeParams.length > 0) {
-            this.params = { ...this.params, routeParams };
-        }
-
-        const handler = this.routes.get(route);
+        this.currentRoute = hash;
+        const handler = this.routes.get(hash);
         if (handler) {
             try {
-                handler(this.params);
+                handler();
             } catch (error) {
-                console.error('Error en ruta:', route, error);
+                console.error('Error en ruta:', hash, error);
                 this.navigate('inicio');
             }
-        } else {
-            this.navigate('inicio');
         }
     }
 
     getCurrentRoute() {
         return this.currentRoute;
     }
-
-    getParams() {
-        return this.params;
-    }
 }
 
-// ===== SISTEMA DE USUARIO =====
 class UserManager {
     constructor(storageManager) {
         this.storage = storageManager;
@@ -820,9 +1836,7 @@ class UserManager {
             edad: 45,
             peso: 74,
             altura: 184,
-            limitaciones: ['artrodesis_lumbar'],
             objetivos: ['ganar_musculo', 'proteccion_lumbares'],
-            deporte_preferido: 'futbol',
             actividad_fisica: 'alta'
         });
     }
@@ -831,35 +1845,21 @@ class UserManager {
         return this.storage.get('preferences', {
             workoutEnabled: true,
             nutritionEnabled: true,
-            theme: 'dark',
-            language: 'es',
-            notifications: true
+            theme: 'dark'
         });
     }
 
     calculateNutritionTargets() {
         const profile = this.profile;
-        const bmr = this.calculateBMR(profile.peso, profile.altura, profile.edad);
-        const tdee = bmr * 1.75;
-
+        const bmr = (10 * profile.peso) + (6.25 * profile.altura) - (5 * profile.edad) + 5;
+        const tdee = bmr * 1.75; // Factor de actividad alta
+        
         return {
             calories: Math.round(tdee),
-            protein: Math.round(profile.peso * 2.2),
-            carbs: Math.round(tdee * 0.4 / 4),
-            fat: Math.round(tdee * 0.25 / 9),
-            fiber: 35
+            protein: Math.round(profile.peso * 2.2), // 2.2g por kg para ganar músculo
+            carbs: Math.round(tdee * 0.4 / 4), // 40% de calorías de carbohidratos
+            fat: Math.round(tdee * 0.25 / 9) // 25% de calorías de grasa
         };
-    }
-
-    calculateBMR(peso, altura, edad) {
-        return (10 * peso) + (6.25 * altura) - (5 * edad) + 5;
-    }
-
-    updateProfile(data) {
-        this.profile = { ...this.profile, ...data };
-        this.storage.set('profile', this.profile);
-        this.nutritionTargets = this.calculateNutritionTargets();
-        window.dispatchEvent(new CustomEvent('profile-updated', { detail: this.profile }));
     }
 
     updatePreferences(data) {
@@ -885,686 +1885,82 @@ class UserManager {
     }
 }
 
-// ===== MÓDULO BASE =====
-class BaseModule {
-    constructor(name, app) {
-        this.name = name;
-        this.app = app;
-        this.initialized = false;
-        this.routes = [];
+class NutritionAPIService {
+    constructor() {
+        this.cache = new Map();
     }
 
-    async init() {
-        if (this.initialized) return;
-
-        console.log(`Inicializando módulo ${this.name}...`);
-        await this.onInit();
-        this.registerRoutes();
-        this.initialized = true;
-
-        console.log(`Módulo ${this.name} inicializado`);
-    }
-
-    async onInit() {
-        // Override en cada módulo
-    }
-
-    registerRoutes() {
-        // Override en cada módulo
-    }
-
-    isEnabled() {
-        return this.app.user.isModuleEnabled(this.name);
-    }
-
-    render(container) {
-        if (!this.isEnabled()) {
-            this.renderDisabled(container);
-            return;
+    async searchFood(query) {
+        if (this.cache.has(query)) {
+            return this.cache.get(query);
         }
-        this.onRender(container);
-    }
 
-    onRender(container) {
-        // Override en cada módulo
-    }
-
-    renderDisabled(container) {
-        const colors = this.app.theme.getColors();
-        container.innerHTML = `
-            <div style="text-align: center; padding: 80px 20px; background: ${colors.background}; border-radius: 20px;">
-                <h2 style="color: ${colors.textSecondary}; font-family: 'Bebas Neue', cursive; font-size: 2.5em; margin-bottom: 20px;">
-                    📱 MÓDULO ${this.name.toUpperCase()} DESHABILITADO
-                </h2>
-                <p style="color: ${colors.textSecondary}; font-size: 1.2em; margin-bottom: 32px;">
-                    Habilita este módulo desde la configuración
-                </p>
-                <button onclick="app.navigate('configuracion')" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 16px 32px; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 16px;">
-                    IR A CONFIGURACIÓN
-                </button>
-            </div>
-        `;
-    }
-}
-
-// ===== MÓDULO DE EJERCICIOS =====
-class WorkoutModule extends BaseModule {
-    constructor(app) {
-        super('workout', app);
-        this.workoutHistory = {};
-        this.exerciseHistory = {};
-        this.vetoedExercises = [];
-
-        this.exerciseDB = {
-            fuerza_superior: [
-                { id: 'fs1', name: 'Press de banca con barra', target: 'Pecho', equipment: 'Barra + banco', description: 'Desarrollo del pectoral mayor', type: 'weight', alternatives: ['fs2'] },
-                { id: 'fs2', name: 'Press inclinado con mancuernas', target: 'Pecho', equipment: 'Mancuernas + banco', description: 'Desarrollo del pectoral superior', type: 'weight', alternatives: ['fs1'] }
-            ],
-            fuerza_inferior: [
-                { id: 'fi1', name: 'Sentadilla trasera con barra', target: 'Cuádriceps', equipment: 'Barra + rack', description: 'Ejercicio fundamental para piernas', type: 'weight', alternatives: ['fi2'] },
-                { id: 'fi2', name: 'Peso muerto rumano', target: 'Isquios/Glúteos', equipment: 'Barra', description: 'Fortalecimiento de cadena posterior', type: 'weight', alternatives: ['fi1'] }
-            ]
+        // Base de datos simulada de alimentos (por 100g)
+        const foods = {
+            // Proteínas
+            'pollo': { name: 'Pechuga de pollo', calories: 165, protein: 31, carbs: 0, fat: 4 },
+            'pavo': { name: 'Pechuga de pavo', calories: 135, protein: 30, carbs: 0, fat: 1 },
+            'ternera': { name: 'Ternera magra', calories: 158, protein: 26, carbs: 0, fat: 5 },
+            'salmón': { name: 'Salmón', calories: 208, protein: 20, carbs: 0, fat: 13 },
+            'atún': { name: 'Atún natural', calories: 116, protein: 25, carbs: 0, fat: 1 },
+            'huevo': { name: 'Huevo entero', calories: 155, protein: 13, carbs: 1, fat: 11 },
+            'clara': { name: 'Clara de huevo', calories: 52, protein: 11, carbs: 1, fat: 0 },
+            'queso': { name: 'Queso fresco', calories: 98, protein: 11, carbs: 4, fat: 4 },
+            
+            // Carbohidratos
+            'arroz': { name: 'Arroz blanco', calories: 130, protein: 3, carbs: 28, fat: 0 },
+            'integral': { name: 'Arroz integral', calories: 111, protein: 3, carbs: 23, fat: 1 },
+            'avena': { name: 'Avena', calories: 389, protein: 17, carbs: 66, fat: 7 },
+            'pasta': { name: 'Pasta', calories: 131, protein: 5, carbs: 25, fat: 1 },
+            'pan': { name: 'Pan integral', calories: 247, protein: 13, carbs: 41, fat: 4 },
+            'patata': { name: 'Patata', calories: 77, protein: 2, carbs: 17, fat: 0 },
+            'boniato': { name: 'Boniato', calories: 86, protein: 2, carbs: 20, fat: 0 },
+            'quinoa': { name: 'Quinoa', calories: 120, protein: 4, carbs: 22, fat: 2 },
+            
+            // Verduras
+            'brócoli': { name: 'Brócoli', calories: 34, protein: 3, carbs: 7, fat: 0 },
+            'espinaca': { name: 'Espinacas', calories: 23, protein: 3, carbs: 4, fat: 0 },
+            'tomate': { name: 'Tomate', calories: 18, protein: 1, carbs: 4, fat: 0 },
+            'lechuga': { name: 'Lechuga', calories: 15, protein: 1, carbs: 3, fat: 0 },
+            'pepino': { name: 'Pepino', calories: 16, protein: 1, carbs: 4, fat: 0 },
+            'calabacín': { name: 'Calabacín', calories: 17, protein: 1, carbs: 3, fat: 0 },
+            'pimiento': { name: 'Pimiento', calories: 31, protein: 1, carbs: 7, fat: 0 },
+            
+            // Frutas
+            'plátano': { name: 'Plátano', calories: 89, protein: 1, carbs: 23, fat: 0 },
+            'manzana': { name: 'Manzana', calories: 52, protein: 0, carbs: 14, fat: 0 },
+            'naranja': { name: 'Naranja', calories: 47, protein: 1, carbs: 12, fat: 0 },
+            'fresa': { name: 'Fresas', calories: 32, protein: 1, carbs: 8, fat: 0 },
+            'kiwi': { name: 'Kiwi', calories: 61, protein: 1, carbs: 15, fat: 1 },
+            
+            // Frutos secos y grasas
+            'almendra': { name: 'Almendras', calories: 579, protein: 21, carbs: 22, fat: 50 },
+            'nuez': { name: 'Nueces', calories: 654, protein: 15, carbs: 14, fat: 65 },
+            'aceite': { name: 'Aceite de oliva', calories: 884, protein: 0, carbs: 0, fat: 100 },
+            'aguacate': { name: 'Aguacate', calories: 160, protein: 2, carbs: 9, fat: 15 }
         };
-    }
 
-    async onInit() {
-        this.loadData();
-    }
-
-    registerRoutes() {
-        this.app.router.register('workout', () => this.showWorkoutView());
-        this.app.router.register('workout-detail', (params) => this.showWorkoutDetail(params.routeParams));
-    }
-
-    loadData() {
-        this.workoutHistory = this.app.storage.get('workout_history', {});
-        this.exerciseHistory = this.app.storage.get('exercise_history', {});
-        this.vetoedExercises = this.app.storage.get('vetoed_exercises', []);
-    }
-
-    showWorkoutView() {
-        const container = document.getElementById('main-content');
-        if (!this.isEnabled()) {
-            this.renderDisabled(container);
-            return;
-        }
-
-        const colors = this.app.theme.getColors();
-
-        container.innerHTML = `
-            <div style="animation: fadeIn 0.6s ease-out;">
-                <div style="margin-bottom: 24px;">
-                    <button onclick="app.navigate('inicio')" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 700;">← INICIO</button>
-                </div>
-                <h2 style="color: ${colors.text}; text-align: center; margin-bottom: 40px; font-family: 'Bebas Neue', cursive; font-size: 3em;">💪 MÓDULO DE EJERCICIOS</h2>
-
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; margin-bottom: 40px;">
-                    <div style="background: ${colors.background}; padding: 36px; border-radius: 20px;">
-                        <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-size: 2em; font-family: 'Bebas Neue', cursive;">📅 RUTINA DE HOY</h3>
-                        <p style="color: ${colors.textSecondary}; margin-bottom: 24px;">Plan personalizado con seguimiento de pesos y series</p>
-                        <button onclick="app.navigate('workout-detail')" style="width: 100%; background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 18px; border-radius: 12px; cursor: pointer; font-weight: 700; text-transform: uppercase;">
-                            VER RUTINA COMPLETA
-                        </button>
-                    </div>
-
-                    <div style="background: ${colors.background}; padding: 36px; border-radius: 20px;">
-                        <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-size: 2em; font-family: 'Bebas Neue', cursive;">📊 PROGRESO</h3>
-                        <div style="text-align: center;">
-                            <div style="margin-bottom: 20px;">
-                                <div style="font-size: 2.5em; font-weight: 700; color: ${colors.accent}; font-family: 'Bebas Neue', cursive;">${Object.keys(this.exerciseHistory).length}</div>
-                                <div style="color: ${colors.textSecondary}; font-weight: 600;">EJERCICIOS REGISTRADOS</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    showWorkoutDetail() {
-        const container = document.getElementById('main-content');
-        const colors = this.app.theme.getColors();
-
-        const exercises = this.exerciseDB.fuerza_superior.concat(this.exerciseDB.fuerza_inferior);
-
-        container.innerHTML = `
-            <div style="animation: fadeIn 0.6s ease-out;">
-                <div style="margin-bottom: 24px;">
-                    <button onclick="app.navigate('workout')" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 700;">← VOLVER</button>
-                </div>
-                <h2 style="color: ${colors.text}; text-align: center; margin-bottom: 40px; font-family: 'Bebas Neue', cursive; font-size: 3em;">💪 RUTINA COMPLETA</h2>
-
-                ${exercises.map((exercise, index) => `
-                    <div class="exercise-container" id="exercise-${exercise.id}" style="background: ${colors.background}; padding: 32px; border-radius: 20px; margin-bottom: 24px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <h3 style="color: ${colors.textDark}; margin: 0; font-family: 'Bebas Neue', cursive; font-size: 2em;">${exercise.name}</h3>
-                            <div style="display: flex; gap: 12px;">
-                                <button onclick="app.workoutModule.substituteExercise('${exercise.id}')" style="background: ${colors.warning}; color: ${colors.textDark}; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.8em;">🔄 SUSTITUIR</button>
-                                <button onclick="app.workoutModule.vetoExercise('${exercise.id}')" style="background: ${colors.danger}; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.8em;">❌ VETAR</button>
-                                <button onclick="app.workoutModule.completeExercise('${exercise.id}')" style="background: ${colors.success}; color: ${colors.textDark}; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.8em;">✅ COMPLETADO</button>
-                            </div>
-                        </div>
-                        <p style="color: ${colors.textSecondary}; margin-bottom: 24px; font-size: 1.1em;">${exercise.description}</p>
-
-                        <div id="sets-container-${exercise.id}" style="margin-bottom: 20px;">
-                            ${this.generateSetsHTML(exercise, colors)}
-                        </div>
-
-                        <button onclick="app.workoutModule.addSet('${exercise.id}')" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 700;">+ AÑADIR SERIE</button>
-                    </div>
-                `).join('')}
-
-                <div style="text-align: center; margin-top: 40px;">
-                    <button onclick="app.workoutModule.saveProgress()" style="background: ${colors.success}; color: ${colors.textDark}; border: none; padding: 18px 36px; border-radius: 12px; cursor: pointer; font-weight: 700; text-transform: uppercase;">
-                        💾 GUARDAR PROGRESO
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    generateSetsHTML(exercise, colors) {
-        let setsHTML = '';
-        for (let i = 0; i < 3; i++) {
-            setsHTML += `
-                <div class="set-row" style="display: grid; grid-template-columns: 40px 1fr 1fr auto; gap: 12px; align-items: center; padding: 12px; margin-bottom: 8px; background: ${colors.primary}; border-radius: 8px;">
-                    <div style="font-weight: 700; color: ${colors.text}; text-align: center;">${i + 1}</div>
-                    <div>
-                        <input type="number" placeholder="Reps" onchange="app.workoutModule.updateSet('${exercise.id}', ${i}, 'reps', this.value)" style="width: 100%; padding: 8px; border: 2px solid ${colors.border}; border-radius: 6px; background: ${colors.background}; color: ${colors.textDark}; text-align: center; font-weight: 600;">
-                        <div style="text-align: center; font-size: 0.8em; color: ${colors.textSecondary}; margin-top: 4px;">REPS</div>
-                    </div>
-                    <div>
-                        <input type="number" step="0.5" placeholder="${exercise.type === 'time' ? 'Segundos' : 'Peso'}" onchange="app.workoutModule.updateSet('${exercise.id}', ${i}, '${exercise.type === 'time' ? 'time' : 'weight'}', this.value)" style="width: 100%; padding: 8px; border: 2px solid ${colors.border}; border-radius: 6px; background: ${colors.background}; color: ${colors.textDark}; text-align: center; font-weight: 600;">
-                        <div style="text-align: center; font-size: 0.8em; color: ${colors.textSecondary}; margin-top: 4px;">${exercise.type === 'time' ? 'SEG' : 'KG'}</div>
-                    </div>
-                    <button onclick="app.workoutModule.removeSet('${exercise.id}', ${i})" style="background: ${colors.danger}; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 700;">✕</button>
-                </div>
-            `;
-        }
-        return setsHTML;
-    }
-
-    updateSet(exerciseId, setIndex, field, value) {
-        if (!this.exerciseHistory[exerciseId]) {
-            this.exerciseHistory[exerciseId] = [];
-        }
-
-        const today = new Date().toISOString().split('T')[0];
-        let todayWorkout = this.exerciseHistory[exerciseId].find(w => w.date === today);
-
-        if (!todayWorkout) {
-            todayWorkout = { date: today, sets: 3, data: [] };
-            this.exerciseHistory[exerciseId].push(todayWorkout);
-        }
-
-        if (!todayWorkout.data[setIndex]) {
-            todayWorkout.data[setIndex] = {};
-        }
-
-        todayWorkout.data[setIndex][field] = parseFloat(value) || 0;
-        this.app.storage.set('exercise_history', this.exerciseHistory);
-    }
-
-    addSet(exerciseId) {
-        const container = document.getElementById(`sets-container-${exerciseId}`);
-        if (!container) return;
-
-        const colors = this.app.theme.getColors();
-        const setIndex = container.children.length;
-
-        const newSetHTML = `
-            <div class="set-row" style="display: grid; grid-template-columns: 40px 1fr 1fr auto; gap: 12px; align-items: center; padding: 12px; margin-bottom: 8px; background: ${colors.primary}; border-radius: 8px;">
-                <div style="font-weight: 700; color: ${colors.text}; text-align: center;">${setIndex + 1}</div>
-                <div>
-                    <input type="number" placeholder="Reps" onchange="app.workoutModule.updateSet('${exerciseId}', ${setIndex}, 'reps', this.value)" style="width: 100%; padding: 8px; border: 2px solid ${colors.border}; border-radius: 6px; background: ${colors.background}; color: ${colors.textDark}; text-align: center; font-weight: 600;">
-                    <div style="text-align: center; font-size: 0.8em; color: ${colors.textSecondary}; margin-top: 4px;">REPS</div>
-                </div>
-                <div>
-                    <input type="number" step="0.5" placeholder="Peso" onchange="app.workoutModule.updateSet('${exerciseId}', ${setIndex}, 'weight', this.value)" style="width: 100%; padding: 8px; border: 2px solid ${colors.border}; border-radius: 6px; background: ${colors.background}; color: ${colors.textDark}; text-align: center; font-weight: 600;">
-                    <div style="text-align: center; font-size: 0.8em; color: ${colors.textSecondary}; margin-top: 4px;">KG</div>
-                </div>
-                <button onclick="app.workoutModule.removeSet('${exerciseId}', ${setIndex})" style="background: ${colors.danger}; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 700;">✕</button>
-            </div>
-        `;
-
-        container.insertAdjacentHTML('beforeend', newSetHTML);
-        this.app.notifications.show('Serie añadida', 'success', 2000);
-    }
-
-    removeSet(exerciseId, setIndex) {
-        const container = document.getElementById(`sets-container-${exerciseId}`);
-        if (!container || container.children.length <= 1) return;
-
-        if (container.children[setIndex]) {
-            container.children[setIndex].remove();
-            this.app.notifications.show('Serie eliminada', 'info', 2000);
-        }
-    }
-
-    substituteExercise(exerciseId) {
-        this.app.notifications.show('Ejercicio sustituido', 'info');
-    }
-
-    vetoExercise(exerciseId) {
-        if (!this.vetoedExercises.includes(exerciseId)) {
-            this.vetoedExercises.push(exerciseId);
-            this.app.storage.set('vetoed_exercises', this.vetoedExercises);
-            this.app.notifications.show('Ejercicio vetado', 'warning');
-
-            const exerciseContainer = document.getElementById(`exercise-${exerciseId}`);
-            if (exerciseContainer) {
-                exerciseContainer.style.opacity = '0.5';
-                exerciseContainer.style.pointerEvents = 'none';
+        const results = [];
+        const lowerQuery = query.toLowerCase();
+        
+        for (const [key, value] of Object.entries(foods)) {
+            if (key.includes(lowerQuery) || value.name.toLowerCase().includes(lowerQuery)) {
+                results.push(value);
             }
         }
-    }
 
-    completeExercise(exerciseId) {
-        const exerciseContainer = document.getElementById(`exercise-${exerciseId}`);
-        if (exerciseContainer) {
-            const colors = this.app.theme.getColors();
-            exerciseContainer.style.background = colors.success;
-
-            const today = new Date().toISOString().split('T')[0];
-            if (!this.workoutHistory[today]) {
-                this.workoutHistory[today] = { completed: [], timestamp: Date.now() };
-            }
-
-            if (!this.workoutHistory[today].completed.includes(exerciseId)) {
-                this.workoutHistory[today].completed.push(exerciseId);
-                this.app.storage.set('workout_history', this.workoutHistory);
-            }
-
-            this.app.notifications.show('¡Ejercicio completado! 🎉', 'success');
-        }
-    }
-
-    saveProgress() {
-        const today = new Date().toISOString().split('T')[0];
-        this.workoutHistory[today] = {
-            completed: true,
-            timestamp: Date.now()
-        };
-        this.app.storage.set('workout_history', this.workoutHistory);
-        this.app.storage.set('exercise_history', this.exerciseHistory);
-        this.app.notifications.show('¡Progreso guardado exitosamente! 💪', 'success');
-    }
-}
-
-// ===== MÓDULO DE NUTRICIÓN =====
-class NutritionModule extends BaseModule {
-    constructor(app) {
-        super('nutrition', app);
-        this.mealHistory = {};
-        this.currentMealPlan = null;
-        this.extraMeals = [];
-
-        this.nutritionDB = {
-            'Café con leche': { calories: 50, protein: 3, carbs: 6, fat: 2, fiber: 0 },
-            'Tostada integral': { calories: 80, protein: 3, carbs: 15, fat: 1, fiber: 2 },
-            'Huevos': { calories: 155, protein: 13, carbs: 1.1, fat: 11, fiber: 0 },
-            'Plátano': { calories: 89, protein: 1.1, carbs: 23, fat: 0.3, fiber: 2.6 },
-            'Pechugas de pollo': { calories: 165, protein: 31, carbs: 0, fat: 3.6, fiber: 0 },
-            'Atún en lata': { calories: 116, protein: 25, carbs: 0, fat: 0.8, fiber: 0 },
-            'Brócoli': { calories: 34, protein: 2.8, carbs: 7, fat: 0.4, fiber: 2.6 },
-            'Arroz integral': { calories: 111, protein: 2.6, carbs: 23, fat: 0.9, fiber: 1.8 }
-        };
-    }
-
-    async onInit() {
-        this.loadData();
-    }
-
-    registerRoutes() {
-        this.app.router.register('nutrition', () => this.showNutritionView());
-        this.app.router.register('meal-plan', () => this.showMealPlan());
-    }
-
-    loadData() {
-        this.mealHistory = this.app.storage.get('meal_history', {});
-        this.extraMeals = this.app.storage.get('extra_meals', []);
-    }
-
-    showNutritionView() {
-        const container = document.getElementById('main-content');
-        if (!this.isEnabled()) {
-            this.renderDisabled(container);
-            return;
-        }
-
-        const colors = this.app.theme.getColors();
-        const targets = this.app.user.getNutritionTargets();
-
-        container.innerHTML = `
-            <div style="animation: fadeIn 0.6s ease-out;">
-                <div style="margin-bottom: 24px;">
-                    <button onclick="app.navigate('inicio')" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 700;">← INICIO</button>
-                </div>
-                <h2 style="color: ${colors.text}; text-align: center; margin-bottom: 40px; font-family: 'Bebas Neue', cursive; font-size: 3em;">🍽️ MÓDULO DE NUTRICIÓN</h2>
-
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; margin-bottom: 40px;">
-                    <div style="background: ${colors.background}; padding: 36px; border-radius: 20px;">
-                        <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-size: 2em; font-family: 'Bebas Neue', cursive;">🎯 OBJETIVOS DIARIOS</h3>
-                        <div style="margin-bottom: 24px;">
-                            <div style="margin: 12px 0; display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid ${colors.border};">
-                                <strong style="color: ${colors.textDark};">Calorías:</strong>
-                                <span style="color: ${colors.textSecondary}; font-weight: 600;">${targets.calories} KCAL</span>
-                            </div>
-                            <div style="margin: 12px 0; display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid ${colors.border};">
-                                <strong style="color: ${colors.textDark};">Proteína:</strong>
-                                <span style="color: ${colors.textSecondary}; font-weight: 600;">${targets.protein}G</span>
-                            </div>
-                            <div style="margin: 12px 0; display: flex; justify-content: space-between; padding: 12px 0;">
-                                <strong style="color: ${colors.textDark};">Carbohidratos:</strong>
-                                <span style="color: ${colors.textSecondary}; font-weight: 600;">${targets.carbs}G</span>
-                            </div>
-                        </div>
-                        <button onclick="app.navigate('meal-plan')" style="width: 100%; background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 18px; border-radius: 12px; cursor: pointer; font-weight: 700; text-transform: uppercase;">
-                            VER PLAN COMPLETO
-                        </button>
-                    </div>
-
-                    <div style="background: ${colors.background}; padding: 36px; border-radius: 20px;">
-                        <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-size: 2em; font-family: 'Bebas Neue', cursive;">📊 SEGUIMIENTO</h3>
-                        <div style="text-align: center;">
-                            <div style="margin-bottom: 20px;">
-                                <div style="font-size: 2.5em; font-weight: 700; color: ${colors.accent}; font-family: 'Bebas Neue', cursive;">${Object.keys(this.nutritionDB).length}</div>
-                                <div style="color: ${colors.textSecondary}; font-weight: 600;">INGREDIENTES</div>
-                            </div>
-                            <div style="margin-bottom: 20px;">
-                                <div style="font-size: 2.5em; font-weight: 700; color: ${colors.secondary}; font-family: 'Bebas Neue', cursive;">92%</div>
-                                <div style="color: ${colors.textSecondary}; font-weight: 600;">ADHERENCIA</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    async showMealPlan() {
-        const container = document.getElementById('main-content');
-        const colors = this.app.theme.getColors();
-        const mealPlan = await this.generateMealPlan();
-        const targets = this.app.user.getNutritionTargets();
-
-        this.currentMealPlan = mealPlan;
-
-        container.innerHTML = `
-            <div style="animation: fadeIn 0.6s ease-out;">
-                <div style="margin-bottom: 24px;">
-                    <button onclick="app.navigate('nutrition')" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 700;">← VOLVER</button>
-                </div>
-                <h2 style="color: ${colors.text}; text-align: center; margin-bottom: 40px; font-family: 'Bebas Neue', cursive; font-size: 3em;">🍽️ PLAN NUTRICIONAL EDITABLE</h2>
-
-                <div style="background: ${colors.background}; padding: 32px; border-radius: 20px; margin-bottom: 32px;">
-                    <h3 style="color: ${colors.textDark}; margin-bottom: 24px; text-align: center; font-family: 'Bebas Neue', cursive; font-size: 2em;">📊 TOTALES DIARIOS</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 20px; text-align: center;">
-                        <div style="padding: 16px; background: ${colors.primary}; border-radius: 12px; border: 3px solid ${this.getStatusColor(mealPlan.dailyTotals.calories, targets.calories, colors)};">
-                            <div style="font-size: 1.8em; font-weight: 700; color: ${colors.text}; font-family: 'Bebas Neue', cursive;">${Math.round(mealPlan.dailyTotals.calories)}</div>
-                            <div style="font-size: 0.9em; color: ${colors.textSecondary}; text-transform: uppercase; font-weight: 600;">KCAL</div>
-                            <div style="font-size: 0.8em; color: ${this.getStatusColor(mealPlan.dailyTotals.calories, targets.calories, colors)}; font-weight: 600; margin-top: 4px;">Meta: ${targets.calories}</div>
-                        </div>
-                        <div style="padding: 16px; background: ${colors.primary}; border-radius: 12px; border: 3px solid ${this.getStatusColor(mealPlan.dailyTotals.protein, targets.protein, colors)};">
-                            <div style="font-size: 1.8em; font-weight: 700; color: ${colors.text}; font-family: 'Bebas Neue', cursive;">${Math.round(mealPlan.dailyTotals.protein * 10) / 10}g</div>
-                            <div style="font-size: 0.9em; color: ${colors.textSecondary}; text-transform: uppercase; font-weight: 600;">PROTEÍNA</div>
-                            <div style="font-size: 0.8em; color: ${this.getStatusColor(mealPlan.dailyTotals.protein, targets.protein, colors)}; font-weight: 600; margin-top: 4px;">Meta: ${targets.protein}g</div>
-                        </div>
-                        <div style="padding: 16px; background: ${colors.primary}; border-radius: 12px; border: 3px solid ${this.getStatusColor(mealPlan.dailyTotals.carbs, targets.carbs, colors)};">
-                            <div style="font-size: 1.8em; font-weight: 700; color: ${colors.text}; font-family: 'Bebas Neue', cursive;">${Math.round(mealPlan.dailyTotals.carbs * 10) / 10}g</div>
-                            <div style="font-size: 0.9em; color: ${colors.textSecondary}; text-transform: uppercase; font-weight: 600;">CARBOHIDRATOS</div>
-                            <div style="font-size: 0.8em; color: ${this.getStatusColor(mealPlan.dailyTotals.carbs, targets.carbs, colors)}; font-weight: 600; margin-top: 4px;">Meta: ${targets.carbs}g</div>
-                        </div>
-                        <div style="padding: 16px; background: ${colors.primary}; border-radius: 12px; border: 3px solid ${this.getStatusColor(mealPlan.dailyTotals.fat, targets.fat, colors)};">
-                            <div style="font-size: 1.8em; font-weight: 700; color: ${colors.text}; font-family: 'Bebas Neue', cursive;">${Math.round(mealPlan.dailyTotals.fat * 10) / 10}g</div>
-                            <div style="font-size: 0.9em; color: ${colors.textSecondary}; text-transform: uppercase; font-weight: 600;">GRASA</div>
-                            <div style="font-size: 0.8em; color: ${this.getStatusColor(mealPlan.dailyTotals.fat, targets.fat, colors)}; font-weight: 600; margin-top: 4px;">Meta: ${targets.fat}g</div>
-                        </div>
-                    </div>
-                </div>
-
-                ${mealPlan.meals.map(meal => `
-                    <div style="background: ${colors.background}; padding: 32px; border-radius: 20px; margin-bottom: 24px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <h3 style="color: ${colors.textDark}; margin: 0; font-family: 'Bebas Neue', cursive; font-size: 2.2em;">${meal.name}</h3>
-                            <span style="color: ${colors.secondary}; font-weight: 700;">${meal.time}</span>
-                        </div>
-
-                        ${meal.ingredients.map(ingredient => `
-                            <div style="background: ${colors.primary}; padding: 20px; border-radius: 15px; margin-bottom: 16px;">
-                                <div style="display: grid; grid-template-columns: 2fr 120px 100px 60px; gap: 12px; margin-bottom: 16px; align-items: center;">
-                                    <div>
-                                        <label style="display: block; margin-bottom: 8px; font-weight: 700; color: ${colors.text}; font-size: 0.85em; text-transform: uppercase;">ALIMENTO:</label>
-                                        <input type="text" value="${ingredient.name}" style="width: 100%; padding: 12px; border: 2px solid ${colors.border}; border-radius: 8px; background: ${colors.background}; color: ${colors.textDark}; font-weight: 500;">
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: 8px; font-weight: 700; color: ${colors.text}; font-size: 0.85em; text-transform: uppercase; text-align: center;">CANTIDAD:</label>
-                                        <input type="number" value="${ingredient.quantity}" step="0.1" style="width: 100%; padding: 12px; border: 2px solid ${colors.border}; border-radius: 8px; background: ${colors.background}; color: ${colors.textDark}; text-align: center; font-weight: 500;">
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: 8px; font-weight: 700; color: ${colors.text}; font-size: 0.85em; text-transform: uppercase; text-align: center;">UNIDAD:</label>
-                                        <select style="width: 100%; padding: 12px; border: 2px solid ${colors.border}; border-radius: 8px; background: ${colors.background}; color: ${colors.textDark}; font-weight: 500; text-align: center;">
-                                            <option value="gramos" ${ingredient.unit === 'gramos' ? 'selected' : ''}>g</option>
-                                            <option value="unidades" ${ingredient.unit === 'unidades' ? 'selected' : ''}>ud</option>
-                                            <option value="mililitros" ${ingredient.unit === 'mililitros' ? 'selected' : ''}>ml</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: 8px; font-weight: 700; color: ${colors.text}; font-size: 0.85em; text-transform: uppercase; text-align: center;">CRUDO:</label>
-                                        <input type="checkbox" ${ingredient.raw ? 'checked' : ''} style="width: 20px; height: 20px; margin: 10px auto; display: block;">
-                                    </div>
-                                </div>
-
-                                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; font-size: 0.9em; padding: 16px; background: ${colors.secondary}; border-radius: 10px;">
-                                    <div style="text-align: center;">
-                                        <div style="font-weight: 700; color: ${colors.textDark};">${Math.round(ingredient.calories)}</div>
-                                        <div style="font-size: 0.8em; color: ${colors.textDark}; opacity: 0.8; font-weight: 600;">KCAL</div>
-                                    </div>
-                                    <div style="text-align: center;">
-                                        <div style="font-weight: 700; color: ${colors.textDark};">${Math.round(ingredient.protein * 10) / 10}g</div>
-                                        <div style="font-size: 0.8em; color: ${colors.textDark}; opacity: 0.8; font-weight: 600;">PROT</div>
-                                    </div>
-                                    <div style="text-align: center;">
-                                        <div style="font-weight: 700; color: ${colors.textDark};">${Math.round(ingredient.carbs * 10) / 10}g</div>
-                                        <div style="font-size: 0.8em; color: ${colors.textDark}; opacity: 0.8; font-weight: 600;">CARB</div>
-                                    </div>
-                                    <div style="text-align: center;">
-                                        <div style="font-weight: 700; color: ${colors.textDark};">${Math.round(ingredient.fat * 10) / 10}g</div>
-                                        <div style="font-size: 0.8em; color: ${colors.textDark}; opacity: 0.8; font-weight: 600;">GRASA</div>
-                                    </div>
-                                    <div style="text-align: center;">
-                                        <div style="font-weight: 700; color: ${colors.textDark};">${Math.round(ingredient.fiber * 10) / 10}g</div>
-                                        <div style="font-size: 0.8em; color: ${colors.textDark}; opacity: 0.8; font-weight: 600;">FIBRA</div>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `).join('')}
-
-                <div style="background: ${colors.background}; padding: 32px; border-radius: 20px; margin-bottom: 32px;">
-                    <h3 style="color: ${colors.textDark}; margin-bottom: 24px; font-family: 'Bebas Neue', cursive; font-size: 2em;">🍴 COMIDAS NO PLANIFICADAS</h3>
-                    <div id="extra-meals-container">
-                        ${this.extraMeals.length === 0 ? '<p style="color: ' + colors.textSecondary + '; text-align: center;">No hay comidas adicionales</p>' : ''}
-                    </div>
-                    <button onclick="app.nutritionModule.addExtraMeal()" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 16px 24px; border-radius: 12px; cursor: pointer; font-weight: 700; text-transform: uppercase;">
-                        + AÑADIR COMIDA NO PLANIFICADA
-                    </button>
-                </div>
-
-                <div style="text-align: center; margin-top: 40px;">
-                    <button onclick="app.nutritionModule.saveMealPlan()" style="background: ${colors.success}; color: ${colors.textDark}; border: none; padding: 18px 36px; border-radius: 12px; cursor: pointer; font-weight: 700; margin: 12px; text-transform: uppercase;">
-                        💾 GUARDAR PLAN
-                    </button>
-                    <button onclick="app.nutritionModule.generateNewPlan()" style="background: ${colors.secondary}; color: ${colors.textDark}; border: none; padding: 18px 36px; border-radius: 12px; cursor: pointer; font-weight: 700; margin: 12px; text-transform: uppercase;">
-                        🔄 REGENERAR
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    getStatusColor(current, target, colors) {
-        const percentage = (current / target) * 100;
-        if (percentage >= 90 && percentage <= 110) {
-            return colors.success;
-        } else if (percentage >= 80 && percentage <= 120) {
-            return colors.warning;
-        } else {
-            return colors.danger;
-        }
-    }
-
-    async generateMealPlan() {
-        const targets = this.app.user.getNutritionTargets();
-        const meals = [];
-
-        // DESAYUNO POR DEFECTO (Café + tostada + huevos + plátano)
-        const breakfast = {
-            id: 'breakfast',
-            name: '🌅 DESAYUNO',
-            time: '7:30',
-            ingredients: [
-                this.createIngredient('Café con leche', 200, 'mililitros'),
-                this.createIngredient('Tostada integral', 2, 'unidades'),
-                this.createIngredient('Huevos', 2, 'unidades'),
-                this.createIngredient('Plátano', 1, 'unidades')
-            ]
-        };
-        meals.push(breakfast);
-
-        // ALMUERZO
-        const snack = {
-            id: 'snack',
-            name: '☕ ALMUERZO',
-            time: 'En cafetería',
-            ingredients: [
-                this.createIngredient('Café con leche', 1, 'unidades', false, { calories: 50, protein: 3, carbs: 6, fat: 2, fiber: 0 })
-            ]
-        };
-        meals.push(snack);
-
-        // COMIDA
-        const lunch = {
-            id: 'comida',
-            name: '🍽️ COMIDA',
-            time: '17:00',
-            ingredients: [
-                this.createIngredient('Pechugas de pollo', 150, 'gramos'),
-                this.createIngredient('Brócoli', 200, 'gramos'),
-                this.createIngredient('Arroz integral', 80, 'gramos')
-            ]
-        };
-        meals.push(lunch);
-
-        // CENA
-        const dinner = {
-            id: 'cena',
-            name: '🌙 CENA',
-            time: '21:00',
-            ingredients: [
-                this.createIngredient('Atún en lata', 100, 'gramos'),
-                this.createIngredient('Brócoli', 150, 'gramos')
-            ]
-        };
-        meals.push(dinner);
-
-        // Calcular totales diarios
-        const dailyTotals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
-        meals.forEach(meal => {
-            meal.ingredients.forEach(ingredient => {
-                dailyTotals.calories += ingredient.calories;
-                dailyTotals.protein += ingredient.protein;
-                dailyTotals.carbs += ingredient.carbs;
-                dailyTotals.fat += ingredient.fat;
-                dailyTotals.fiber += ingredient.fiber || 0;
-            });
+        // Ordenar por relevancia (coincidencia exacta primero)
+        results.sort((a, b) => {
+            const aExact = a.name.toLowerCase().includes(lowerQuery);
+            const bExact = b.name.toLowerCase().includes(lowerQuery);
+            if (aExact && !bExact) return -1;
+            if (!aExact && bExact) return 1;
+            return 0;
         });
 
-        return {
-            meals: meals,
-            dailyTotals: dailyTotals,
-            targets: targets
-        };
-    }
-
-    createIngredient(name, quantity, unit, raw = false, customNutrition = null) {
-        const nutritionData = customNutrition || this.nutritionDB[name];
-        let nutrition = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
-
-        if (nutritionData) {
-            const multiplier = this.getQuantityMultiplier(quantity, unit, name);
-            nutrition = {
-                calories: (nutritionData.calories * multiplier),
-                protein: (nutritionData.protein * multiplier),
-                carbs: (nutritionData.carbs * multiplier),
-                fat: (nutritionData.fat * multiplier),
-                fiber: (nutritionData.fiber * multiplier)
-            };
-        }
-
-        return {
-            id: 'ingredient_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-            name: name,
-            quantity: quantity,
-            unit: unit,
-            raw: raw,
-            calories: nutrition.calories,
-            protein: nutrition.protein,
-            carbs: nutrition.carbs,
-            fat: nutrition.fat,
-            fiber: nutrition.fiber
-        };
-    }
-
-    getQuantityMultiplier(quantity, unit, ingredientName) {
-        if (unit === 'gramos') {
-            return quantity / 100;
-        } else if (unit === 'unidades') {
-            const unitWeights = {
-                'Huevos': 60,
-                'Plátano': 120,
-                'Tostada integral': 30
-            };
-            const weight = unitWeights[ingredientName] || 100;
-            return (quantity * weight) / 100;
-        } else if (unit === 'mililitros') {
-            return quantity / 100;
-        }
-        return quantity / 100;
-    }
-
-    addExtraMeal() {
-        const newMeal = {
-            id: 'extra_' + Date.now(),
-            name: 'Nueva comida',
-            description: '',
-            calories: 0,
-            protein: 0,
-            carbs: 0,
-            fat: 0
-        };
-
-        this.extraMeals.push(newMeal);
-        this.app.notifications.show('Comida no planificada añadida', 'success', 2000);
-    }
-
-    saveMealPlan() {
-        const today = new Date().toISOString().split('T')[0];
-        this.mealHistory[today] = {
-            plan: this.currentMealPlan,
-            saved: true,
-            timestamp: Date.now()
-        };
-        this.app.storage.set('meal_history', this.mealHistory);
-        this.app.notifications.show('¡Plan nutricional guardado! 📊', 'success');
-    }
-
-    generateNewPlan() {
-        this.app.notifications.show('Generando nuevo plan...', 'info');
-        setTimeout(() => {
-            this.showMealPlan();
-        }, 1000);
+        const finalResults = results.slice(0, 6); // Máximo 6 resultados
+        this.cache.set(query, finalResults);
+        return finalResults;
     }
 }
 
@@ -1579,6 +1975,12 @@ if (document.readyState === 'loading') {
     app = new SuloFitnessApp();
 }
 
+// Exportar para testing
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { SuloFitnessApp, WorkoutModule, NutritionModule };
+    module.exports = { 
+        SuloFitnessApp, 
+        NutritionModule, 
+        WorkoutModule, 
+        NutritionAPIService 
+    };
 }
