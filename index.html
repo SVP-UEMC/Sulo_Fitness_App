@@ -18,39 +18,19 @@
     
     <title>Sulo Fitness v2.0 - Tu Asistente de Fitness</title>
     <meta name="description" content="Aplicación de fitness y nutrición personalizada con seguimiento de macronutrientes">
-    <meta name="keywords" content="fitness, nutrición, entrenamiento, macronutrientes, salud">
-    <meta name="author" content="Sulo Fitness Team">
-    
-    <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#3b82f6">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Sulo Fitness">
     
-    <!-- Manifest and Icons -->
+    <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2'><path d='M6.5 6.5h11'/><path d='M6.5 17.5h11'/><circle cx='6.5' cy='6.5' r='2.5'/><circle cx='17.5' cy='17.5' r='2.5'/></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'><path d='M6.5 6.5h11'/><path d='M6.5 17.5h11'/><circle cx='6.5' cy='6.5' r='2.5'/><circle cx='17.5' cy='17.5' r='2.5'/></svg>">
-    
-    <!-- Preload Critical Resources -->
-    <link rel="preload" href="app.js?v=2.0.1" as="script">
     
     <style>
-        /* Critical CSS inline para evitar FOUC */
-        * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; 
             background: #0f172a; 
             color: #f8fafc; 
             overflow-x: hidden;
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
         
         #loading-screen {
@@ -62,13 +42,11 @@
             justify-content: center;
             align-items: center;
             z-index: 10000;
-            animation: pulse 2s ease-in-out infinite;
         }
         
         .loading-logo {
             font-size: 3.5em;
             margin-bottom: 32px;
-            filter: drop-shadow(0 8px 16px rgba(59, 130, 246, 0.4));
             animation: bounce 2s ease-in-out infinite;
         }
         
@@ -79,10 +57,6 @@
             margin-bottom: 20px;
             letter-spacing: -1px;
             text-align: center;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
         
         .loading-subtitle {
@@ -91,7 +65,6 @@
             margin-bottom: 48px;
             text-align: center;
             font-weight: 500;
-            animation: fadeInUp 0.8s ease-out 0.5s both;
         }
         
         .loading-spinner {
@@ -102,7 +75,6 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-bottom: 24px;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
         }
         
         .loading-progress {
@@ -112,22 +84,11 @@
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1.5px;
-            animation: fadeInUp 0.8s ease-out 0.8s both;
-        }
-        
-        .loading-dots {
-            display: inline-block;
-            animation: dots 1.5s steps(4, end) infinite;
         }
         
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.9; }
         }
         
         @keyframes bounce {
@@ -136,41 +97,14 @@
             60% { transform: translateY(-5px); }
         }
         
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        @keyframes dots {
-            0%, 20% { content: ''; }
-            40% { content: '.'; }
-            60% { content: '..'; }
-            80%, 100% { content: '...'; }
-        }
-        
-        /* App Container */
         #app { 
             display: none; 
             min-height: 100vh;
-            background: #0f172a;
         }
         
-        /* Estados de carga */
-        .app-loaded #loading-screen { 
-            display: none !important; 
-        }
+        .app-loaded #loading-screen { display: none !important; }
+        .app-loaded #app { display: block !important; }
         
-        .app-loaded #app { 
-            display: block !important; 
-        }
-        
-        /* Error fallback mejorado */
         .error-message {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: white;
@@ -180,20 +114,6 @@
             text-align: center;
             font-weight: 600;
             display: none;
-            box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .error-message h2 {
-            font-size: 1.5em;
-            margin-bottom: 12px;
-            color: #fef2f2;
-        }
-        
-        .error-message p {
-            margin-bottom: 20px;
-            color: #fecaca;
-            line-height: 1.5;
         }
         
         .error-message button {
@@ -204,163 +124,42 @@
             border-radius: 8px;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .error-message button:hover {
-            background: #f3f4f6;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* Performance optimizations */
-        * {
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        body {
-            -webkit-overflow-scrolling: touch;
-            touch-action: manipulation;
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .loading-logo { font-size: 2.8em; margin-bottom: 24px; }
-            .loading-title { font-size: 2.2em; }
-            .loading-subtitle { font-size: 1.1em; margin-bottom: 32px; }
-            .loading-spinner { width: 48px; height: 48px; border-width: 4px; }
-            .error-message { margin: 16px; padding: 20px; }
-        }
-        
-        @media (max-width: 480px) {
-            .loading-title { font-size: 1.8em; }
-            .loading-subtitle { font-size: 1em; }
+            margin-top: 16px;
         }
     </style>
 </head>
 <body>
-    <!-- Pantalla de carga mejorada -->
     <div id="loading-screen">
         <div class="loading-logo">💪</div>
         <h1 class="loading-title">SULO FITNESS</h1>
-        <p class="loading-subtitle">Cargando arquitectura modular<span class="loading-dots">...</span></p>
+        <p class="loading-subtitle">Cargando arquitectura modular...</p>
         <div class="loading-spinner"></div>
         <p class="loading-progress">Inicializando módulos</p>
     </div>
     
-    <!-- Contenedor principal de la app -->
     <div id="app"></div>
     
-    <!-- Mensaje de error mejorado -->
     <div id="error-fallback" class="error-message">
         <h2>⚠️ Error de Carga</h2>
-        <p>Ha ocurrido un error al cargar la aplicación. Por favor, verifica tu conexión a internet y recarga la página.</p>
-        <button onclick="window.location.reload()" type="button">🔄 Recargar Aplicación</button>
+        <p>Ha ocurrido un error al cargar la aplicación.</p>
+        <button onclick="window.location.reload()">🔄 Recargar</button>
     </div>
 
-    <!-- Scripts de inicialización -->
     <script>
-        // Enhanced error handling
-        let loadingTimeout;
-        let errorShown = false;
-        
-        function showError(message) {
-            if (errorShown) return;
-            errorShown = true;
-            
-            console.error('🚨 Error de carga:', message);
-            
-            const loadingScreen = document.getElementById('loading-screen');
-            const errorFallback = document.getElementById('error-fallback');
-            
-            if (loadingScreen) loadingScreen.style.display = 'none';
-            if (errorFallback) {
-                errorFallback.style.display = 'block';
-                errorFallback.innerHTML = `
-                    <h2>⚠️ Error de Carga</h2>
-                    <p>${message}</p>
-                    <p><small>Error técnico: ${message}</small></p>
-                    <button onclick="window.location.reload()" type="button">🔄 Recargar Aplicación</button>
-                `;
-            }
-        }
-        
-        // Global error handlers
         window.addEventListener('error', function(event) {
-            showError(`Error de JavaScript: ${event.error?.message || 'Error desconocido'}`);
+            console.error('Error:', event.error);
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('error-fallback').style.display = 'block';
         });
         
-        window.addEventListener('unhandledrejection', function(event) {
-            showError(`Promise rechazada: ${event.reason?.message || event.reason || 'Error de promesa'}`);
-        });
-        
-        // Resource loading timeout
-        loadingTimeout = setTimeout(function() {
-            showError('Timeout de carga: La aplicación está tardando demasiado en cargar. Verifica tu conexión a internet.');
-        }, 20000); // 20 segundos timeout aumentado
-        
-        // Clear timeout when app loads successfully
-        function appLoaded() {
-            if (loadingTimeout) {
-                clearTimeout(loadingTimeout);
-                loadingTimeout = null;
+        setTimeout(function() {
+            if (document.getElementById('loading-screen').style.display !== 'none') {
+                document.getElementById('loading-screen').style.display = 'none';
+                document.getElementById('error-fallback').style.display = 'block';
             }
-            
-            const loadingScreen = document.getElementById('loading-screen');
-            if (loadingScreen) {
-                loadingScreen.style.animation = 'fadeOut 0.5s ease-out';
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                    document.body.classList.add('app-loaded');
-                }, 500);
-            }
-        }
-        
-        // Performance monitoring
-        if ('performance' in window) {
-            window.addEventListener('load', function() {
-                setTimeout(function() {
-                    const navigation = performance.getEntriesByType('navigation')[0];
-                    if (navigation) {
-                        console.log(`⏱️ Tiempo de carga: ${Math.round(navigation.loadEventEnd - navigation.fetchStart)}ms`);
-                    }
-                }, 0);
-            });
-        }
-        
-        // Service Worker registration with error handling
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('service-worker.js')
-                    .then(function(registration) {
-                        console.log('✅ Service Worker registrado:', registration.scope);
-                    })
-                    .catch(function(error) {
-                        console.warn('⚠️ Error registrando Service Worker:', error);
-                        // No mostrar error por Service Worker, no es crítico
-                    });
-            });
-        }
-        
-        // Connection status monitoring
-        function updateConnectionStatus() {
-            if (navigator.onLine) {
-                console.log('🌐 Conexión restaurada');
-            } else {
-                console.warn('📵 Sin conexión a internet');
-            }
-        }
-        
-        window.addEventListener('online', updateConnectionStatus);
-        window.addEventListener('offline', updateConnectionStatus);
-        
-        // Make appLoaded globally available
-        window.appLoaded = appLoaded;
+        }, 15000);
     </script>
     
-    <!-- App principal con cache busting -->
-    <script src="app.js?v=2.0.1&t=1728563321" defer></script>
+    <script src="app.js" defer></script>
 </body>
 </html>
