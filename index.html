@@ -3,19 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>💪 Sulo Fitness v3.0</title>
+    <title>💪 Sulo Fitness | Entrenamiento y Nutrición</title>
+    
+    <!-- PWA -->
     <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Sulo Fitness">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💪</text></svg>">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Contenedor principal -->
-    <div id="app">
-        <!-- La app se carga aquí -->
+    <!-- Loading Screen -->
+    <div id="loading" class="loading-screen">
+        <div class="loader">
+            <div class="spinner"></div>
+            <h2>💪 Sulo Fitness</h2>
+            <p>Cargando aplicación...</p>
+        </div>
     </div>
-    
-    <!-- Scripts necesarios -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+
+    <!-- Main App -->
+    <div id="app" class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1>💪 Sulo Fitness</h1>
+                    <span class="version">Módulos Separados</span>
+                </div>
+                <div class="header-right">
+                    <button id="theme-toggle" class="btn-icon">🌙</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav-bar">
+            <button class="nav-btn active" data-view="inicio">🏠 Inicio</button>
+            <button class="nav-btn" data-view="ejercicios">🏋️ Ejercicios</button>
+            <button class="nav-btn" data-view="nutricion">🥗 Nutrición</button>
+            <button class="nav-btn" data-view="progreso">📊 Progreso</button>
+        </nav>
+
+        <!-- Content -->
+        <main id="main-content" class="main-content">
+            <!-- Dynamic content loads here -->
+        </main>
+    </div>
+
+    <!-- Scripts -->
     <script src="app.js"></script>
 </body>
 </html>
